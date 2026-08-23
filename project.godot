@@ -8,11 +8,15 @@
 
 config_version=5
 
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
 [application]
 
 config/name="Godot Game Template"
 config/description="A minimal Godot 4 C# template repository for new game projects."
-config/features=PackedStringArray("4.2", "C#")
+config/features=PackedStringArray("4.6")
 config/icon="res://icon.svg"
 
 [dotnet]
