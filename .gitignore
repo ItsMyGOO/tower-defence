@@ -1,0 +1,30 @@
+# Godot generated files
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+
+# Godot mono / C# generated files
+.mono/
+*.csproj.old
+*.sln
+
+# Build outputs
+bin/
+obj/
+build/
+dist/
+
+# Logs and crash dumps
+*.log
+*.tmp
+*.temp
+*.dmp
+
+# IDE and OS files
+.vscode/
+.idea/
+*.user
+*.suo
+.DS_Store
+Thumbs.db

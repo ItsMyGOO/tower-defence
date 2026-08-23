@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Godot game template icon">
+  <rect width="128" height="128" rx="24" fill="#2f6df6"/>
+  <path d="M28 82V42h72v40L64 102 28 82Z" fill="#ffffff" opacity="0.95"/>
+  <path d="M43 58h12v12H43V58Zm30 0h12v12H73V58Z" fill="#2f6df6"/>
+  <path d="M50 82h28" stroke="#2f6df6" stroke-width="8" stroke-linecap="round"/>
+</svg>
