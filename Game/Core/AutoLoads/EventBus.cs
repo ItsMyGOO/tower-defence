@@ -52,6 +52,12 @@ namespace TowerDefence.Core.AutoLoads
         public static event Action<string, int> OnEnemyKilled;
 
         /// <summary>
+        /// 当敌人沿路径移动至尽头（未被击杀、成功逃脱）时触发。
+        /// </summary>
+        /// <param name="damageToPlayer">该敌人对玩家造成的生命值扣除量</param>
+        public static event Action<int> OnEnemyReachedEnd;
+
+        /// <summary>
         /// 当新一波敌人开始生成时触发。
         /// </summary>
         /// <param name="waveIndex">当前波次的索引（从 0 或 1 开始，依游戏规则而定）</param>
@@ -108,6 +114,12 @@ namespace TowerDefence.Core.AutoLoads
         /// <param name="enemyId">被击杀敌人的资源标识符或配置 ID</param>
         /// <param name="goldReward">击杀该敌人获得的金币奖励</param>
         public static void RaiseEnemyKilled(string enemyId, int goldReward) => OnEnemyKilled?.Invoke(enemyId, goldReward);
+
+        /// <summary>
+        /// 发布敌人走到路径尽头事件。
+        /// </summary>
+        /// <param name="damageToPlayer">该敌人对玩家造成的生命值扣除量</param>
+        public static void RaiseEnemyReachedEnd(int damageToPlayer) => OnEnemyReachedEnd?.Invoke(damageToPlayer);
 
         /// <summary>
         /// 发布波次开始事件。
