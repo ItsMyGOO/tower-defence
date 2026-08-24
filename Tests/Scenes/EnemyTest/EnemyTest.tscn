@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://ddon7ebx61sma"]
+
+[ext_resource type="Script" uid="uid://c8m24rrui7k0l" path="res://Tests/Scenes/EnemyTest/EnemyTest.cs" id="1_enemytest_script"]
+[ext_resource type="Resource" path="res://Tests/Data/Enemies/Test_SlimeData.tres" id="2_test_slimedata"]
+
+[sub_resource type="Curve2D" id="Curve2D_1"]
+
+[node name="EnemyTestRoot" type="Node2D" unique_id=657775795 node_paths=PackedStringArray("EnemyPath")]
+script = ExtResource("1_enemytest_script")
+EnemyPath = NodePath("EnemyPath")
+TestEnemyData = ExtResource("2_test_slimedata")
+
+[node name="EnemyPath" type="Path2D" parent="." unique_id=2136676515]
+position = Vector2(100, 300)
+curve = SubResource("Curve2D_1")
