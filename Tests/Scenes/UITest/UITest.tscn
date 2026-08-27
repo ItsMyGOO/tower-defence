@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Tests/Scenes/UITest/UITest.cs" id="1_uitest_script"]
+[ext_resource type="Resource" path="res://Tests/Data/Towers/Test_ArrowTower.tres" id="2_arrow_tower"]
+
+[node name="UITestRoot" type="Node2D"]
+script = ExtResource("1_uitest_script")
+TestTowerData = ExtResource("2_arrow_tower")
+InitialGold = 30
+InitialHp = 20

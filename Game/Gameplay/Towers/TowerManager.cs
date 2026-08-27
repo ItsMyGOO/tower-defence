@@ -13,6 +13,13 @@ namespace TowerDefence.Gameplay.Towers
     /// </summary>
     public partial class TowerManager : Node
     {
+        /// <summary>
+        /// 获取 TowerManager 的全局单例实例。
+        /// 用于 UI 层（HUD 商店按钮）与建造槽位等模块快速访问建造管理器，
+        /// 需确保场景中仅存在一个 TowerManager 实例，否则可能导致引用非预期节点。
+        /// </summary>
+        public static TowerManager Instance { get; private set; }
+
         #region 导出配置
 
         /// <summary>
@@ -31,6 +38,31 @@ namespace TowerDefence.Gameplay.Towers
         /// 随后在玩家点击 TowerSlot 时将此值传入 TryBuildTower。
         /// </summary>
         public TowerData CurrentSelectedTowerData { get; set; }
+
+        #endregion
+
+        #region 生命周期
+
+        /// <summary>
+        /// 节点被添加到场景树时调用。
+        /// 初始化单例引用，确保全局仅有一个 TowerManager 实例。
+        /// </summary>
+        public override void _Ready()
+        {
+            Instance = this;
+        }
+
+        /// <summary>
+        /// 节点即将从场景树移除时调用。
+        /// 清空单例引用，避免引用已销毁节点。
+        /// </summary>
+        public override void _ExitTree()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+        }
 
         #endregion
 

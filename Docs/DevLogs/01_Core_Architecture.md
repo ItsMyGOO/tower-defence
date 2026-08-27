@@ -19,4 +19,10 @@ Tower 在 `_Ready` 中动态挂载 Area2D+CircleShape2D（半径=Data.AttackRang
 TowerSlot 继承 Node2D，以 `IsOccupied`（private set）与 `CurrentTower` 两个只读属性封装槽位占用状态，仅通过 `PlaceTower(Tower)` 方法在内部原子性地切换状态并挂载塔节点，杜绝外部非法篡改导致同一槽位重复建塔的竞态问题。槽位本身只负责"能否建造"的布尔判定与塔实例持有，不参与任何经济扣费或塔实例化，保持单一职责，便于后续升级出售、塔查询、槽位高亮等功能扩展。
 
 ## TowerManager 建造事务与事件广播
-TowerManager 采用严格的事务顺序：参数与槽位占用校验 → `EconomyManager.TrySpendGold` 原子扣费 → 实例化 Tower 预制体并注入数据 → `slot.PlaceTower` 挂载 → 任意步失败立即回滚（扣费失败直接返回、挂载失败则 `AddGold` 返还金币），确保金币与塔实例状态始终一致。成功建造后通过 `EventBus.RaiseTowerBuilt(towerData, slot.GlobalPosition)` 广播携带塔配置与世界坐标的事件，供 UI、音效、成就等模块松耦合订阅，避免 TowerManager 反向依赖上层模块。
+TowerManager 采用严格的事务顺序：参数与槽位占用校验 → `EconomyManager.TrySpendGold` 原子扣费 → 实例化 Tower 预制体并注入数据 → `slot.PlaceTower` 挂载 → 任意步失败立即回滚（扣费失败直接返回、挂载失败则 `AddGold` 返还金币），确保金币与塔实例状态始终一致。成功建造后通过 `EventBus.RaiseTowerBuilt(towerData, slot.GlobalPosition)` 广播携带塔配置与世界坐标的事件，供 UI、音效、成就等模块松耦合订阅，避免 TowerManager 反向依赖上层模块。为保持与 EconomyManager 一致的访问风格，TowerManager 补充 `Instance` 静态单例，便于 HUD 层快速调用。
+
+## HUDView 局内 HUD 与 EventBus 解耦刷新
+HUDView 继承 CanvasLayer，通过 `[Export]` 暴露 GoldLabel / HpLabel / WaveLabel 与 BuildButtonsContainer 四个节点引用，将 UI 与 Gameplay 状态完全通过 EventBus 解耦刷新：`_Ready` 统一订阅 `OnGoldChanged` / `OnPlayerHpChanged` / `OnWaveStarted` 三个事件，`_ExitTree` 对称取消订阅防止内存泄漏。收到事件时调用独立的 `RefreshXxxLabel()` 私有方法按预设文本格式更新 UI，绝不直接访问 EconomyManager 或 WaveManager 内部状态，保持 UI 层零依赖零反向引用，新增 HUD 实现可独立迁移到其他场景或替换为其他 UI 框架。
+
+## TowerBuildButton 建造按钮与金币变化响应逻辑
+TowerBuildButton 继承 Button，通过 `[Export] TowerData Data` 绑定具体塔配置，在 `_Ready` 时订阅 EventBus.OnGoldChanged 并根据玩家金币实时刷新 Disabled 状态：当前金币 >= `Data.BuildCost` 时按钮启用，不足时自动置灰禁用。按钮点击事件直接设置 TowerManager.Instance.CurrentSelectedTowerData = Data，将待建造塔类型交还给业务层，自身不参与任何金币扣除或塔实例化逻辑，保持单一职责，便于后续接入建造预览、价格字体高亮、技能冷却计时等 UI 扩展。
