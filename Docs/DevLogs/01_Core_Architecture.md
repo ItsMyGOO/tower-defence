@@ -26,3 +26,9 @@ HUDView 继承 CanvasLayer，通过 `[Export]` 暴露 GoldLabel / HpLabel / Wave
 
 ## TowerBuildButton 建造按钮与金币变化响应逻辑
 TowerBuildButton 继承 Button，通过 `[Export] TowerData Data` 绑定具体塔配置，在 `_Ready` 时订阅 EventBus.OnGoldChanged 并根据玩家金币实时刷新 Disabled 状态：当前金币 >= `Data.BuildCost` 时按钮启用，不足时自动置灰禁用。按钮点击事件直接设置 TowerManager.Instance.CurrentSelectedTowerData = Data，将待建造塔类型交还给业务层，自身不参与任何金币扣除或塔实例化逻辑，保持单一职责，便于后续接入建造预览、价格字体高亮、技能冷却计时等 UI 扩展。
+
+## GameManager 游戏主状态机与胜负判定闭环
+GameManager 以 `GameState` 枚举（Preparation / InWave / GameWin / GameLose）四态维护局内主流程，通过订阅 EventBus 中 OnWaveStarted 切换至 InWave、OnWaveCompleted 时结合 WaveManager.AllWavesCompleted 与 AliveEnemyCount == 0 两个条件自动发布 OnGameOver(true)，另由 EconomyManager 在 HP 归零时发布 OnGameOver(false)，形成胜利与失败两条独立触发的判定闭环，任何一条路径达成均视为游戏结束，拒绝重复触发避免多次结算。GameManager 在收到 OnGameOver 回调后立即调用 `GetTree().Paused = true` 冻结全局逻辑时钟（_Process 与动画暂停、UI 交互保留），确保结算面板弹出时战斗世界不再推进，玩家可从容阅读结果并操作重新开始或退出按钮；点击"重新开始"时先显式 `Paused = false` 再 `ReloadCurrentScene()`，确保下一局从干净的非暂停态启动。
+
+## GameOverPanel 胜负结算面板与场景重置
+GameOverPanel 继承 CanvasLayer 保持在 UI 顶层，默认隐藏，收到 EventBus.OnGameOver(bool isVictory) 时根据参数将 TitleLabel 设置为"胜利!"或"战败!"并显示面板，同时通过 `[Export]` 暴露 RestartButton 与 QuitButton 两个可配置按钮引用，点击 RestartButton 按 `Paused=false → ReloadCurrentScene()` 顺序执行重置，点击 QuitButton 在编辑器模式打印提示、打包模式调用 `GetTree().Quit()`，为后续接入主菜单场景预留切换入口。整个 UI 与业务完全解耦：GameOverPanel 不直接引用 GameManager 或 EconomyManager，所有胜负信号统一由 EventBus 广播，新增移动端结算界面或成就系统可独立订阅同一 OnGameOver 事件而无需改动现有模块。
