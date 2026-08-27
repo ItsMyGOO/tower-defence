@@ -7,6 +7,7 @@ namespace TowerDefence.Gameplay.Enemies
     /// <summary>
     /// 敌人实体节点，沿 Path2D 定义的路径移动并处理受击与销毁逻辑。
     /// 必须作为 Path2D 的子节点挂载，由波次管理器在运行时实例化并注入 EnemyData 配置。
+    /// 运行时动态挂载 Area2D 碰撞体，使防御塔能通过范围检测锁定并攻击该敌人。
     /// </summary>
     public partial class Enemy : PathFollow2D
     {
@@ -22,9 +23,12 @@ namespace TowerDefence.Gameplay.Enemies
         /// </summary>
         public float CurrentHp { get; private set; }
 
+        private Area2D _hitArea;
+        private CollisionShape2D _hitShape;
+
         /// <summary>
         /// 节点被添加到场景树时调用。
-        /// 完成生命值初始化并校验 Data 配置是否已正确注入。
+        /// 完成生命值初始化、校验 Data 配置，以及动态创建索敌碰撞体。
         /// </summary>
         public override void _Ready()
         {
@@ -37,6 +41,32 @@ namespace TowerDefence.Gameplay.Enemies
 
             CurrentHp = Data.MaxHp;
             Progress = 0.0f;
+
+            SetupHitArea();
+        }
+
+        /// <summary>
+        /// 创建并配置用于防御塔索敌检测的 Area2D 与圆形碰撞体。
+        /// 碰撞半径采用固定值 16 像素（适配 ColorRect 占位视觉），
+        /// 使 Tower 的 DetectionArea 能够通过 Area 信号捕获该敌人。
+        /// </summary>
+        private void SetupHitArea()
+        {
+            _hitArea = new Area2D
+            {
+                Name = "EnemyHitArea"
+            };
+            AddChild(_hitArea);
+
+            _hitShape = new CollisionShape2D
+            {
+                Name = "EnemyHitShape",
+                Shape = new CircleShape2D
+                {
+                    Radius = 16.0f
+                }
+            };
+            _hitArea.AddChild(_hitShape);
         }
 
         /// <summary>

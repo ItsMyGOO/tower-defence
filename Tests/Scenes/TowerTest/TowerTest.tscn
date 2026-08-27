@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://tower_test_scene_001"]
+
+[ext_resource type="Script" path="res://Tests/Scenes/TowerTest/TowerTest.cs" id="1_towertest_script"]
+[ext_resource type="Resource" path="res://Tests/Data/Enemies/Test_SlimeData.tres" id="2_test_slimedata"]
+[ext_resource type="Resource" path="res://Tests/Data/Towers/Test_ArrowTower.tres" id="3_test_towerdata"]
+
+[sub_resource type="Curve2D" id="Curve2D_1"]
+points/0 = Vector2(-50, 0)
+points/1 = Vector2(150, 0)
+points/2 = Vector2(300, 0)
+points/3 = Vector2(400, 0)
+points/4 = Vector2(500, 0)
+points/5 = Vector2(650, 0)
+points/6 = Vector2(850, 0)
+
+[node name="TowerTestRoot" type="Node2D" unique_id=11001001]
+script = ExtResource("1_towertest_script")
+EnemyPath = NodePath("EnemyPath")
+TestEnemyData = ExtResource("2_test_slimedata")
+TestTowerData = ExtResource("3_test_towerdata")
+TowerPosition = Vector2(400, 180)
+SpawnInterval = 2.5
+MaxSpawnCount = 6
+
+[node name="EnemyPath" type="Path2D" parent="." unique_id=11001002]
+position = Vector2(0, 300)
+curve = SubResource("Curve2D_1")

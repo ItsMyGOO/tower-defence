@@ -11,3 +11,6 @@ Enemy 继承 `PathFollow2D`，必须作为 `Path2D` 直接子节点，`Progress 
 
 ## EconomyManager 经济与生命值管理器
 EconomyManager 作为玩家状态的唯一收拢点，通过 `[Export]` 暴露 InitialGold / InitialHp，运行时以 CurrentGold / CurrentHp 私有 set 确保所有变更都走统一入口（EventBus 订阅 + TrySpendGold 方法），杜绝外部直接修改状态导致事件漏发。订阅 `OnEnemyKilled` 累加金币、`OnEnemyReachedEnd` 递减 HP，每次状态变更立即 `RaiseGoldChanged` / `RaisePlayerHpChanged`；HP 归零则置位 `IsGameOver` 并发布 `OnGameOver(false)`，随后拒绝所有后续经济/扣血操作，防止负金币或多次 GameOver。对外提供 `CanAfford` / `TrySpendGold` 防御塔建造/升级的幂等消费接口，金额为 0 或负数时直接短路避免无意义事件。
+
+## Tower 防御塔索敌与攻击
+Tower 在 `_Ready` 中动态挂载 Area2D+CircleShape2D（半径=Data.AttackRange）作为索敌检测区，通过 AreaEntered/AreaExited 信号维护进入范围的 Enemy 列表，并用 `List<Enemy>` 保证顺序优先攻击最早进入的目标。攻击循环依赖独立 Timer（WaitTime=Data.AttackInterval）驱动，Timeout 时从目标列表非空即对首目标调用 `TakeDamage(Data.Damage)`，同时订阅每个目标的 `TreeExiting` 实现敌人死亡/逃脱时自动从列表移除，避免空引用与重复索敌。
