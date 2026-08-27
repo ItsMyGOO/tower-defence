@@ -1,0 +1,11 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+TestName = "经济系统基础用例"
+Description = "验证初始金币=50, 初始HP=5时，3次击杀奖励+2次逃脱伤害后HP归零触发GameOver"
+InitialGold = 50
+InitialHp = 5
+ExpectedKills = 3
+KillRewardEach = 20
+ExpectedEscapes = 2
+EscapeDamageEach = 3

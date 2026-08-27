@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Tests/Scenes/EconomyTest/EconomyTest.cs" id="1_economytest_script"]
+[ext_resource type="Script" path="res://Game/Gameplay/Economy/EconomyManager.cs" id="2_economymanager_script"]
+
+[node name="EconomyTestRoot" type="Node2D" node_paths=PackedStringArray("Economy")]
+script = ExtResource("1_economytest_script")
+Economy = NodePath("EconomyManager")
+TestKillReward = 15
+TestEscapeDamage = 2
+TestStepInterval = 1.5
+
+[node name="EconomyManager" type="Node" parent="."]
+script = ExtResource("2_economymanager_script")
+InitialGold = 100
+InitialHp = 10

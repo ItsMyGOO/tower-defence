@@ -1,0 +1,11 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+TestName = "经济系统压力用例"
+Description = "验证初始金币=200, 初始HP=3时，快速消费与高伤害逃脱能否正常触发边界"
+InitialGold = 200
+InitialHp = 3
+ExpectedKills = 1
+KillRewardEach = 50
+ExpectedEscapes = 5
+EscapeDamageEach = 5
