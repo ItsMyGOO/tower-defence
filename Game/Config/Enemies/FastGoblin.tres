@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Game/Config/Enemies/EnemyData.cs" id="1_enemydata"]
+
+[resource]
+script = ExtResource("1_enemydata")
+EnemyId = "fast_goblin"
+EnemyName = "迅捷哥布林"
+MaxHp = 50.0
+MoveSpeed = 180.0
+RewardGold = 12
+DamageToPlayer = 1

@@ -32,3 +32,12 @@ GameManager 以 `GameState` 枚举（Preparation / InWave / GameWin / GameLose�
 
 ## GameOverPanel 胜负结算面板与场景重置
 GameOverPanel 继承 CanvasLayer 保持在 UI 顶层，默认隐藏，收到 EventBus.OnGameOver(bool isVictory) 时根据参数将 TitleLabel 设置为"胜利!"或"战败!"并显示面板，同时通过 `[Export]` 暴露 RestartButton 与 QuitButton 两个可配置按钮引用，点击 RestartButton 按 `Paused=false → ReloadCurrentScene()` 顺序执行重置，点击 QuitButton 在编辑器模式打印提示、打包模式调用 `GetTree().Quit()`，为后续接入主菜单场景预留切换入口。整个 UI 与业务完全解耦：GameOverPanel 不直接引用 GameManager 或 EconomyManager，所有胜负信号统一由 EventBus 广播，新增移动端结算界面或成就系统可独立订阅同一 OnGameOver 事件而无需改动现有模块。
+
+## Level_01 正式关卡场景节点树布局
+Level_01.tscn 采用四层节点树分区架构：World（Node2D）承载地图背景与 EnemyPath 刷怪路径，Slots（Node2D）沿路径拐点周围对称布置 6 个 TowerSlot 槽位，Systems（Node）集中挂载 EconomyManager / WaveManager / TowerManager / GameManager 四个业务管理器并通过 NodePath 互相绑定引用，UI（CanvasLayer）作为独立图层承载 HUDView 与 GameOverPanel 预制体实例，确保世界坐标渲染、交互槽位、业务逻辑、UI 绘制在逻辑与视觉上完全分层，便于后续扩展新地图时复用预制体与系统挂载模式。
+
+## Level_01 系统串联方案
+Level_01.cs 作为关卡控制器通过 `[Export]` 引用 WaveManager、GameManager、SlotsContainer 三个关键节点，在 _Ready 中通过 FirstWaveTimer 延迟调用 WaveManager.StartNextWave() 启动首波，波次完成时在 HandleWaveCompleted 回调中判断 AllWavesCompleted，非最后一波则通过 NextWaveTimer 再次触发 StartNextWave 实现波次无缝衔接；同时遍历 SlotsContainer 下所有 TowerSlot 动态追加 Area2D+CircleShape2D 点击检测体，左键点击时读取 TowerManager.Instance.CurrentSelectedTowerData 并调用 TryBuildTower 完成建造事务入口，填补了 TowerSlot 单一职责下缺少用户输入处理的空白，使选塔→点槽→扣费→建塔流程完整贯通。
+
+## 垂直切片闭环设计思考
+首关垂直切片的完整数据流为：HUD 建造按钮被点击 → TowerBuildButton 将 TowerData 写入 CurrentSelectedTowerData → 玩家点击 TowerSlot → Level_01 转发给 TowerManager.TryBuildTower → EconomyManager 扣金币并广播 OnGoldChanged → 塔实例挂载后广播 OnTowerBuilt → HUD 按钮与金币标签同步刷新；战斗链路则由 WaveManager 按 WaveData 配置定时生成 Enemy 挂载至 Path2D → Enemy 沿路径移动或被 Tower 攻击击杀 → OnEnemyKilled / OnEnemyReachedEnd 分别触发金币回流 / HP 扣除 → HP 归零或 AllWavesCompleted 时任一路径触发 OnGameOver → GameManager 冻结时钟并由 GameOverPanel 弹出结算；整个闭环零硬编码引用，所有跨模块交互统一走 EventBus，新增系统（如成就、音效）只需订阅对应事件即可无缝接入而无需修改现有模块。

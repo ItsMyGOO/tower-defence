@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WaveData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://Game/Config/Waves/WaveData.cs" id="1_wavedata"]
+[ext_resource type="Resource" path="res://Game/Config/Enemies/BasicSlime.tres" id="2_slime"]
+[ext_resource type="Resource" path="res://Game/Config/Enemies/FastGoblin.tres" id="3_goblin"]
+[ext_resource type="Resource" path="res://Game/Config/Enemies/TankOrc.tres" id="4_orc"]
+
+[resource]
+script = ExtResource("1_wavedata")
+WaveIndex = 4
+EnemyTypes = Array[ExtResource("4_orc"), ExtResource("3_goblin"), ExtResource("3_goblin"), ExtResource("2_slime"), ExtResource("2_slime"), ExtResource("4_orc"), ExtResource("3_goblin"), ExtResource("4_orc"), ExtResource("3_goblin"), ExtResource("4_orc"), ExtResource("2_slime"), ExtResource("2_slime")]
+SpawnInterval = 0.8
+DelayBeforeStart = 12.0

@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://enemy_base_scene"]
+
+[ext_resource type="Script" path="res://Game/Gameplay/Enemies/Enemy.cs" id="1_enemy_script"]
+
+[node name="EnemyBase" type="PathFollow2D"]
+script = ExtResource("1_enemy_script")
+
+[node name="EnemyVisual" type="ColorRect" parent="."]
+offset_left = -12.0
+offset_top = -12.0
+offset_right = 12.0
+offset_bottom = 12.0
+color = Color(0.8, 0.2, 0.2, 1)
+
+[node name="EnemyLabel" type="Label" parent="."]
+offset_left = -20.0
+offset_top = -28.0
+offset_right = 20.0
+offset_bottom = -12.0
+text = "Enemy"
+horizontal_alignment = 1
