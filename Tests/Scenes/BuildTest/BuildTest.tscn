@@ -1,0 +1,83 @@
+[gd_scene format=3 uid="uid://build_test_scene_007"]
+
+[ext_resource type="Script" path="res://Tests/Scenes/BuildTest/BuildTest.cs" id="1_buildtest_script"]
+[ext_resource type="Script" path="res://Game/Gameplay/Economy/EconomyManager.cs" id="2_economy_manager"]
+[ext_resource type="Script" path="res://Game/Gameplay/Towers/TowerManager.cs" id="3_tower_manager"]
+[ext_resource type="Script" path="res://Game/Gameplay/Towers/TowerSlot.cs" id="4_tower_slot"]
+[ext_resource type="Resource" path="res://Tests/Data/Towers/Test_ArrowTower.tres" id="5_test_towerdata"]
+
+[node name="BuildTestRoot" type="Node2D" unique_id=10071001]
+script = ExtResource("1_buildtest_script")
+TestTowerData = ExtResource("5_test_towerdata")
+EconomyManagerNode = NodePath("EconomyManager")
+TowerManagerNode = NodePath("TowerManager")
+Slot1 = NodePath("TowerSlots/Slot1")
+Slot2 = NodePath("TowerSlots/Slot2")
+Slot3 = NodePath("TowerSlots/Slot3")
+
+[node name="EconomyManager" type="Node" parent="." unique_id=10071002]
+script = ExtResource("2_economy_manager")
+InitialGold = 120
+InitialHp = 20
+
+[node name="TowerManager" type="Node" parent="." unique_id=10071003]
+script = ExtResource("3_tower_manager")
+
+[node name="TowerSlots" type="Node2D" parent="." unique_id=10071004]
+
+[node name="Slot1" type="Node2D" parent="TowerSlots" unique_id=10071005]
+position = Vector2(200, 300)
+script = ExtResource("4_tower_slot")
+
+[node name="Slot1Visual" type="ColorRect" parent="TowerSlots/Slot1"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.4)
+
+[node name="Slot1Label" type="Label" parent="TowerSlots/Slot1"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "Slot1"
+horizontal_alignment = 1
+
+[node name="Slot2" type="Node2D" parent="TowerSlots" unique_id=10071006]
+position = Vector2(450, 300)
+script = ExtResource("4_tower_slot")
+
+[node name="Slot2Visual" type="ColorRect" parent="TowerSlots/Slot2"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.4)
+
+[node name="Slot2Label" type="Label" parent="TowerSlots/Slot2"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "Slot2"
+horizontal_alignment = 1
+
+[node name="Slot3" type="Node2D" parent="TowerSlots" unique_id=10071007]
+position = Vector2(700, 300)
+script = ExtResource("4_tower_slot")
+
+[node name="Slot3Visual" type="ColorRect" parent="TowerSlots/Slot3"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.4)
+
+[node name="Slot3Label" type="Label" parent="TowerSlots/Slot3"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "Slot3"
+horizontal_alignment = 1

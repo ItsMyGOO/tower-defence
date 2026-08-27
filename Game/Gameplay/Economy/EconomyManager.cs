@@ -11,6 +11,13 @@ namespace TowerDefence.Gameplay.Economy
     /// </summary>
     public partial class EconomyManager : Node
     {
+        /// <summary>
+        /// 获取 EconomyManager 的全局单例实例。
+        /// 用于其他模块（如 TowerManager）在场景树中快速访问经济管理器，
+        /// 需确保场景中仅存在一个 EconomyManager 实例，否则可能导致引用非预期节点。
+        /// </summary>
+        public static EconomyManager Instance { get; private set; }
+
         #region 导出配置
 
         /// <summary>
@@ -58,6 +65,7 @@ namespace TowerDefence.Gameplay.Economy
         /// </summary>
         public override void _Ready()
         {
+            Instance = this;
             CurrentGold = InitialGold;
             CurrentHp = InitialHp;
             IsGameOver = false;
@@ -71,12 +79,17 @@ namespace TowerDefence.Gameplay.Economy
 
         /// <summary>
         /// 节点即将从场景树移除时调用。
-        /// 取消 EventBus 订阅，避免委托悬空导致的内存泄漏。
+        /// 取消 EventBus 订阅，避免委托悬空导致的内存泄漏；并清空单例引用。
         /// </summary>
         public override void _ExitTree()
         {
             EventBus.OnEnemyReachedEnd -= HandleEnemyReachedEnd;
             EventBus.OnEnemyKilled -= HandleEnemyKilled;
+
+            if (Instance == this)
+            {
+                Instance = null;
+            }
         }
 
         #endregion
@@ -112,6 +125,20 @@ namespace TowerDefence.Gameplay.Economy
             CurrentGold -= amount;
             EventBus.RaiseGoldChanged(CurrentGold);
             return true;
+        }
+
+        /// <summary>
+        /// 向当前金币中增加指定金额。
+        /// 用于出售塔返还金币、波次奖励等场景，增加后自动广播 OnGoldChanged 事件。
+        /// </summary>
+        /// <param name="amount">需要增加的金币金额（应为非负整数）</param>
+        public void AddGold(int amount)
+        {
+            if (IsGameOver) return;
+            if (amount <= 0) return;
+
+            CurrentGold += amount;
+            EventBus.RaiseGoldChanged(CurrentGold);
         }
 
         #endregion

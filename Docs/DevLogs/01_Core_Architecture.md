@@ -14,3 +14,9 @@ EconomyManager 作为玩家状态的唯一收拢点，通过 `[Export]` 暴露 I
 
 ## Tower 防御塔索敌与攻击
 Tower 在 `_Ready` 中动态挂载 Area2D+CircleShape2D（半径=Data.AttackRange）作为索敌检测区，通过 AreaEntered/AreaExited 信号维护进入范围的 Enemy 列表，并用 `List<Enemy>` 保证顺序优先攻击最早进入的目标。攻击循环依赖独立 Timer（WaitTime=Data.AttackInterval）驱动，Timeout 时从目标列表非空即对首目标调用 `TakeDamage(Data.Damage)`，同时订阅每个目标的 `TreeExiting` 实现敌人死亡/逃脱时自动从列表移除，避免空引用与重复索敌。
+
+## TowerSlot 建造槽位与状态管理
+TowerSlot 继承 Node2D，以 `IsOccupied`（private set）与 `CurrentTower` 两个只读属性封装槽位占用状态，仅通过 `PlaceTower(Tower)` 方法在内部原子性地切换状态并挂载塔节点，杜绝外部非法篡改导致同一槽位重复建塔的竞态问题。槽位本身只负责"能否建造"的布尔判定与塔实例持有，不参与任何经济扣费或塔实例化，保持单一职责，便于后续升级出售、塔查询、槽位高亮等功能扩展。
+
+## TowerManager 建造事务与事件广播
+TowerManager 采用严格的事务顺序：参数与槽位占用校验 → `EconomyManager.TrySpendGold` 原子扣费 → 实例化 Tower 预制体并注入数据 → `slot.PlaceTower` 挂载 → 任意步失败立即回滚（扣费失败直接返回、挂载失败则 `AddGold` 返还金币），确保金币与塔实例状态始终一致。成功建造后通过 `EventBus.RaiseTowerBuilt(towerData, slot.GlobalPosition)` 广播携带塔配置与世界坐标的事件，供 UI、音效、成就等模块松耦合订阅，避免 TowerManager 反向依赖上层模块。

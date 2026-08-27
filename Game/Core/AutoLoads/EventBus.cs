@@ -40,6 +40,13 @@ namespace TowerDefence.Core.AutoLoads
         /// <param name="gridPosition">被出售防御塔所在的网格坐标</param>
         public static event Action<Vector2I> OnTowerSold;
 
+        /// <summary>
+        /// 当防御塔建造成功时触发。
+        /// </summary>
+        /// <param name="towerData">建造的塔数据资源</param>
+        /// <param name="buildPosition">建造的世界坐标位置</param>
+        public static event Action<Config.Towers.TowerData, Vector2> OnTowerBuilt;
+
         #endregion
 
         #region 敌人与波次
@@ -107,6 +114,13 @@ namespace TowerDefence.Core.AutoLoads
         /// </summary>
         /// <param name="gridPosition">被出售防御塔所在的网格坐标</param>
         public static void RaiseTowerSold(Vector2I gridPosition) => OnTowerSold?.Invoke(gridPosition);
+
+        /// <summary>
+        /// 发布防御塔建造成功事件。
+        /// </summary>
+        /// <param name="towerData">建造的塔数据资源</param>
+        /// <param name="buildPosition">建造的世界坐标位置</param>
+        public static void RaiseTowerBuilt(Config.Towers.TowerData towerData, Vector2 buildPosition) => OnTowerBuilt?.Invoke(towerData, buildPosition);
 
         /// <summary>
         /// 发布敌人击杀事件。
