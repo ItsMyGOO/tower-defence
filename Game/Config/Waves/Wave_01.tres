@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="WaveData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Game/Config/Waves/WaveData.cs" id="1_wavedata"]
+[ext_resource type="Resource" path="res://Game/Config/Enemies/BasicSlime.tres" id="2_slime"]
+
+[resource]
+script = ExtResource("1_wavedata")
+WaveIndex = 1
+EnemyTypes = Array[Resource]([ExtResource("2_slime"), ExtResource("2_slime"), ExtResource("2_slime"), ExtResource("2_slime"), ExtResource("2_slime"), ExtResource("2_slime")])
+SpawnInterval = 1.2
+DelayBeforeStart = 5.0

@@ -1,0 +1,179 @@
+[gd_scene format=3 uid="uid://s4d4m30wag82"]
+
+[ext_resource type="Script" uid="uid://nvmxbob5gbab" path="res://Game/Gameplay/Map/Level_01.cs" id="1_level_script"]
+[ext_resource type="Script" uid="uid://dgevr8wd70vuu" path="res://Game/Gameplay/Economy/EconomyManager.cs" id="2_economy_manager"]
+[ext_resource type="Script" uid="uid://b6fyk2pm3x8hi" path="res://Game/Gameplay/Waves/WaveManager.cs" id="3_wave_manager"]
+[ext_resource type="Script" uid="uid://81xv8r23aloi" path="res://Game/Gameplay/Towers/TowerManager.cs" id="4_tower_manager"]
+[ext_resource type="Script" uid="uid://ffnji2746ll" path="res://Game/Core/Managers/GameManager.cs" id="5_game_manager"]
+[ext_resource type="Script" uid="uid://bj8l0h33roqq6" path="res://Game/Config/Waves/WaveData.cs" id="5_r15lr"]
+[ext_resource type="Script" uid="uid://bdprf04g8bige" path="res://Game/Gameplay/Towers/TowerSlot.cs" id="6_tower_slot"]
+[ext_resource type="PackedScene" path="res://Game/Scenes/EnemyBase.tscn" id="7_enemy_base"]
+[ext_resource type="PackedScene" path="res://Game/Scenes/TowerBase.tscn" id="8_tower_base"]
+[ext_resource type="PackedScene" path="res://Game/Scenes/HUDView.tscn" id="9_hud_view"]
+[ext_resource type="PackedScene" path="res://Game/Scenes/GameOverPanel.tscn" id="10_gameover_panel"]
+[ext_resource type="Resource" path="res://Game/Config/Waves/Wave_01.tres" id="11_wave_01"]
+[ext_resource type="Resource" path="res://Game/Config/Waves/Wave_02.tres" id="12_wave_02"]
+[ext_resource type="Resource" path="res://Game/Config/Waves/Wave_03.tres" id="13_wave_03"]
+[ext_resource type="Resource" path="res://Game/Config/Waves/Wave_04.tres" id="14_wave_04"]
+
+[sub_resource type="Curve2D" id="Curve2D_1"]
+
+[node name="Level_01" type="Node2D" unique_id=1141078503]
+script = ExtResource("1_level_script")
+
+[node name="World" type="Node2D" parent="." unique_id=999383796]
+
+[node name="MapBackground" type="ColorRect" parent="World" unique_id=1511150779]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.15, 0.3, 0.15, 1)
+
+[node name="PathHintVisual" type="Line2D" parent="World" unique_id=769356294]
+points = PackedVector2Array(100, 300, 500, 300, 500, 150, 900, 150, 900, 450, 1300, 450)
+width = 40.0
+default_color = Color(0.45, 0.35, 0.2, 1)
+
+[node name="EnemyPath" type="Path2D" parent="World" unique_id=1481738760]
+position = Vector2(100, 300)
+curve = SubResource("Curve2D_1")
+
+[node name="Slots" type="Node2D" parent="." unique_id=1461357162]
+
+[node name="Slot01" type="Node2D" parent="Slots" unique_id=808291950]
+position = Vector2(300, 180)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot01Visual" type="ColorRect" parent="Slots/Slot01" unique_id=779781703]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot01Label" type="Label" parent="Slots/Slot01" unique_id=2073161814]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "1"
+horizontal_alignment = 1
+
+[node name="Slot02" type="Node2D" parent="Slots" unique_id=1522057613]
+position = Vector2(300, 420)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot02Visual" type="ColorRect" parent="Slots/Slot02" unique_id=472539437]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot02Label" type="Label" parent="Slots/Slot02" unique_id=1302681015]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "2"
+horizontal_alignment = 1
+
+[node name="Slot03" type="Node2D" parent="Slots" unique_id=1201150603]
+position = Vector2(500, 70)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot03Visual" type="ColorRect" parent="Slots/Slot03" unique_id=921120334]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot03Label" type="Label" parent="Slots/Slot03" unique_id=435087037]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "3"
+horizontal_alignment = 1
+
+[node name="Slot04" type="Node2D" parent="Slots" unique_id=1553115115]
+position = Vector2(700, 260)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot04Visual" type="ColorRect" parent="Slots/Slot04" unique_id=1507772107]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot04Label" type="Label" parent="Slots/Slot04" unique_id=1218979427]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "4"
+horizontal_alignment = 1
+
+[node name="Slot05" type="Node2D" parent="Slots" unique_id=574815991]
+position = Vector2(750, 520)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot05Visual" type="ColorRect" parent="Slots/Slot05" unique_id=433708612]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot05Label" type="Label" parent="Slots/Slot05" unique_id=457112476]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "5"
+horizontal_alignment = 1
+
+[node name="Slot06" type="Node2D" parent="Slots" unique_id=809270979]
+position = Vector2(1100, 350)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot06Visual" type="ColorRect" parent="Slots/Slot06" unique_id=1694255670]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot06Label" type="Label" parent="Slots/Slot06" unique_id=1525202797]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "6"
+horizontal_alignment = 1
+
+[node name="Systems" type="Node" parent="." unique_id=750199017]
+
+[node name="EconomyManager" type="Node" parent="Systems" unique_id=421817639]
+script = ExtResource("2_economy_manager")
+InitialGold = 150
+
+[node name="WaveManager" type="Node" parent="Systems" unique_id=495849305 node_paths=PackedStringArray("TargetPath")]
+script = ExtResource("3_wave_manager")
+Waves = Array[ExtResource("5_r15lr")]([ExtResource("11_wave_01"), ExtResource("12_wave_02"), ExtResource("13_wave_03"), ExtResource("14_wave_04")])
+EnemyBaseScene = ExtResource("7_enemy_base")
+TargetPath = NodePath("../../World/EnemyPath")
+
+[node name="TowerManager" type="Node" parent="Systems" unique_id=1054886105]
+script = ExtResource("4_tower_manager")
+TowerBaseScene = ExtResource("8_tower_base")
+
+[node name="GameManager" type="Node" parent="Systems" unique_id=1926474564]
+script = ExtResource("5_game_manager")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=710558157]
+
+[node name="HUDView" parent="UI" unique_id=746584680 instance=ExtResource("9_hud_view")]
+
+[node name="GameOverPanel" parent="UI" unique_id=583167207 instance=ExtResource("10_gameover_panel")]

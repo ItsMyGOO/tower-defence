@@ -1,0 +1,55 @@
+[gd_scene load_steps=4 format=3 uid="uid://hud_view_scene"]
+
+[ext_resource type="Script" path="res://Game/UI/HUD/HUDView.cs" id="1_hud_script"]
+[ext_resource type="Script" path="res://Game/UI/HUD/TowerBuildButton.cs" id="2_buildbutton_script"]
+[ext_resource type="Resource" path="res://Game/Config/Towers/ArrowTower.tres" id="3_arrow_tower"]
+[ext_resource type="Resource" path="res://Game/Config/Towers/CannonTower.tres" id="4_cannon_tower"]
+
+[node name="HUDView" type="CanvasLayer"]
+script = ExtResource("1_hud_script")
+GoldLabel = NodePath("TopBar/GoldLabel")
+HpLabel = NodePath("TopBar/HpLabel")
+WaveLabel = NodePath("TopBar/WaveLabel")
+BuildButtonsContainer = NodePath("BottomBar/BuildButtons")
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 500.0
+offset_bottom = 60.0
+
+[node name="GoldLabel" type="Label" parent="TopBar"]
+custom_minimum_size = Vector2(120, 0)
+text = "金币: 0"
+horizontal_alignment = 1
+
+[node name="HpLabel" type="Label" parent="TopBar"]
+custom_minimum_size = Vector2(120, 0)
+text = "血量: 0"
+horizontal_alignment = 1
+
+[node name="WaveLabel" type="Label" parent="TopBar"]
+custom_minimum_size = Vector2(120, 0)
+text = "波次: 1"
+horizontal_alignment = 1
+
+[node name="BottomBar" type="HBoxContainer" parent="."]
+offset_left = 20.0
+offset_top = 600.0
+offset_right = 800.0
+offset_bottom = 680.0
+
+[node name="BuildButtons" type="HBoxContainer" parent="BottomBar"]
+size_flags_horizontal = 3
+
+[node name="ArrowTowerButton" type="Button" parent="BottomBar/BuildButtons"]
+custom_minimum_size = Vector2(120, 60)
+text = "箭塔(50)"
+script = ExtResource("2_buildbutton_script")
+Data = ExtResource("3_arrow_tower")
+
+[node name="CannonTowerButton" type="Button" parent="BottomBar/BuildButtons"]
+custom_minimum_size = Vector2(120, 60)
+text = "炮塔(100)"
+script = ExtResource("2_buildbutton_script")
+Data = ExtResource("4_cannon_tower")
