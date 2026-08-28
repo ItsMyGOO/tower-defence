@@ -1,0 +1,223 @@
+[gd_scene format=3 uid="uid://level_02_scene"]
+
+[ext_resource type="Script" path="res://Game/Gameplay/Map/Level_02.cs" id="1_level_script"]
+[ext_resource type="Script" path="res://Game/Gameplay/Economy/EconomyManager.cs" id="2_economy_manager"]
+[ext_resource type="Script" path="res://Game/Gameplay/Waves/WaveManager.cs" id="3_wave_manager"]
+[ext_resource type="Script" path="res://Game/Gameplay/Towers/TowerManager.cs" id="4_tower_manager"]
+[ext_resource type="Script" path="res://Game/Core/Managers/GameManager.cs" id="5_game_manager"]
+[ext_resource type="Script" path="res://Game/Config/Waves/WaveData.cs" id="5_r15lr"]
+[ext_resource type="Script" path="res://Game/Gameplay/Towers/TowerSlot.cs" id="6_tower_slot"]
+[ext_resource type="PackedScene" path="res://Game/Scenes/EnemyBase.tscn" id="7_enemy_base"]
+[ext_resource type="PackedScene" path="res://Game/Scenes/TowerBase.tscn" id="8_tower_base"]
+[ext_resource type="PackedScene" path="res://Game/Scenes/HUDView.tscn" id="9_hud_view"]
+[ext_resource type="PackedScene" path="res://Game/Scenes/GameOverPanel.tscn" id="10_gameover_panel"]
+[ext_resource type="Resource" path="res://Game/Config/Waves/Wave_02.tres" id="11_wave_02"]
+[ext_resource type="Resource" path="res://Game/Config/Waves/Wave_03.tres" id="12_wave_03"]
+[ext_resource type="Resource" path="res://Game/Config/Waves/Wave_04.tres" id="13_wave_04"]
+[ext_resource type="Resource" path="res://Game/Config/Waves/Wave_01.tres" id="14_wave_01"]
+[ext_resource type="Script" path="res://Game/Core/Managers/AudioManager.cs" id="15_audio_manager"]
+[ext_resource type="PackedScene" path="res://Game/Gameplay/Effects/EnemyDeathEffect.tscn" id="16_death_effect"]
+
+[sub_resource type="Curve2D" id="Curve2D_1"]
+
+[node name="Level_02" type="Node2D"]
+script = ExtResource("1_level_script")
+
+[node name="World" type="Node2D" parent="."]
+
+[node name="MapBackground" type="ColorRect" parent="World"]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.18, 0.15, 0.28, 1)
+
+[node name="PathHintVisual" type="Line2D" parent="World"]
+points = PackedVector2Array(80, 320, 400, 320, 400, 120, 720, 120, 720, 520, 1040, 520, 1040, 240, 1360, 240)
+width = 40.0
+default_color = Color(0.5, 0.3, 0.45, 1)
+
+[node name="EnemyPath" type="Path2D" parent="World"]
+position = Vector2(80, 320)
+curve = SubResource("Curve2D_1")
+
+[node name="Slots" type="Node2D" parent="."]
+
+[node name="Slot01" type="Node2D" parent="Slots"]
+position = Vector2(240, 200)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot01Visual" type="ColorRect" parent="Slots/Slot01"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot01Label" type="Label" parent="Slots/Slot01"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "1"
+horizontal_alignment = 1
+
+[node name="Slot02" type="Node2D" parent="Slots"]
+position = Vector2(240, 440)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot02Visual" type="ColorRect" parent="Slots/Slot02"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot02Label" type="Label" parent="Slots/Slot02"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "2"
+horizontal_alignment = 1
+
+[node name="Slot03" type="Node2D" parent="Slots"]
+position = Vector2(560, 40)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot03Visual" type="ColorRect" parent="Slots/Slot03"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot03Label" type="Label" parent="Slots/Slot03"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "3"
+horizontal_alignment = 1
+
+[node name="Slot04" type="Node2D" parent="Slots"]
+position = Vector2(560, 320)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot04Visual" type="ColorRect" parent="Slots/Slot04"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot04Label" type="Label" parent="Slots/Slot04"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "4"
+horizontal_alignment = 1
+
+[node name="Slot05" type="Node2D" parent="Slots"]
+position = Vector2(880, 320)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot05Visual" type="ColorRect" parent="Slots/Slot05"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot05Label" type="Label" parent="Slots/Slot05"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "5"
+horizontal_alignment = 1
+
+[node name="Slot06" type="Node2D" parent="Slots"]
+position = Vector2(880, 600)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot06Visual" type="ColorRect" parent="Slots/Slot06"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot06Label" type="Label" parent="Slots/Slot06"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "6"
+horizontal_alignment = 1
+
+[node name="Slot07" type="Node2D" parent="Slots"]
+position = Vector2(1200, 120)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot07Visual" type="ColorRect" parent="Slots/Slot07"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot07Label" type="Label" parent="Slots/Slot07"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "7"
+horizontal_alignment = 1
+
+[node name="Slot08" type="Node2D" parent="Slots"]
+position = Vector2(1200, 360)
+script = ExtResource("6_tower_slot")
+
+[node name="Slot08Visual" type="ColorRect" parent="Slots/Slot08"]
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+color = Color(0.2, 0.6, 1, 0.45)
+
+[node name="Slot08Label" type="Label" parent="Slots/Slot08"]
+offset_left = -20.0
+offset_top = 25.0
+offset_right = 20.0
+offset_bottom = 45.0
+text = "8"
+horizontal_alignment = 1
+
+[node name="Systems" type="Node" parent="."]
+
+[node name="EconomyManager" type="Node" parent="Systems"]
+script = ExtResource("2_economy_manager")
+InitialGold = 200
+
+[node name="WaveManager" type="Node" parent="Systems" node_paths=PackedStringArray("TargetPath")]
+script = ExtResource("3_wave_manager")
+Waves = Array[ExtResource("5_r15lr")]([ExtResource("14_wave_01"), ExtResource("11_wave_02"), ExtResource("12_wave_03"), ExtResource("13_wave_04")])
+EnemyBaseScene = ExtResource("7_enemy_base")
+TargetPath = NodePath("../../World/EnemyPath")
+
+[node name="TowerManager" type="Node" parent="Systems"]
+script = ExtResource("4_tower_manager")
+TowerBaseScene = ExtResource("8_tower_base")
+
+[node name="GameManager" type="Node" parent="Systems"]
+script = ExtResource("5_game_manager")
+
+[node name="AudioManager" type="Node" parent="Systems"]
+script = ExtResource("15_audio_manager")
+EnemyDeathEffectScene = ExtResource("16_death_effect")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="HUDView" parent="UI" instance=ExtResource("9_hud_view")]
+
+[node name="GameOverPanel" parent="UI" instance=ExtResource("10_gameover_panel")]

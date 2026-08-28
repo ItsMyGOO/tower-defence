@@ -16,9 +16,13 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Godot Game Template"
 config/description="A minimal Godot 4 C# template repository for new game projects."
-run/main_scene="res://Game/Gameplay/Map/Level_01.tscn"
+run/main_scene="res://Game/UI/MainMenu/MainMenu.tscn"
 config/features=PackedStringArray("4.6", "C#")
 config/icon="res://icon.svg"
+
+[autoload]
+
+SceneManager="*res://Game/Core/Managers/SceneManager.cs"
 
 [dotnet]
 

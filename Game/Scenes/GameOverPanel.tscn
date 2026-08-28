@@ -6,6 +6,8 @@
 script = ExtResource("1_gameover_script")
 TitleLabel = NodePath("CenterContainer/VBox/TitleLabel")
 RestartButton = NodePath("CenterContainer/VBox/RestartButton")
+LevelSelectButton = NodePath("CenterContainer/VBox/LevelSelectButton")
+NextLevelButton = NodePath("CenterContainer/VBox/NextLevelButton")
 QuitButton = NodePath("CenterContainer/VBox/QuitButton")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -18,27 +20,40 @@ offset_right = 1280.0
 offset_bottom = 720.0
 
 [node name="VBox" type="VBoxContainer" parent="CenterContainer"]
-custom_minimum_size = Vector2(400, 300)
+custom_minimum_size = Vector2(420, 480)
 alignment = 1
+theme_override_constants/separation = 18
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/VBox"]
-custom_minimum_size = Vector2(400, 80)
+custom_minimum_size = Vector2(400, 90)
 text = "胜利!"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 48
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 54
 
-[node name="Spacer" type="Control" parent="CenterContainer/VBox"]
-custom_minimum_size = Vector2(0, 40)
+[node name="SpacerTop" type="Control" parent="CenterContainer/VBox"]
+custom_minimum_size = Vector2(0, 10)
+
+[node name="NextLevelButton" type="Button" parent="CenterContainer/VBox"]
+custom_minimum_size = Vector2(280, 62)
+text = "➡️ 下一关"
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
 
 [node name="RestartButton" type="Button" parent="CenterContainer/VBox"]
-custom_minimum_size = Vector2(200, 60)
-text = "重新开始"
+custom_minimum_size = Vector2(280, 62)
+text = "🔄 重新开始"
 size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
 
-[node name="Spacer2" type="Control" parent="CenterContainer/VBox"]
-custom_minimum_size = Vector2(0, 20)
+[node name="LevelSelectButton" type="Button" parent="CenterContainer/VBox"]
+custom_minimum_size = Vector2(280, 62)
+text = "🗺️ 返回选关"
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
 
 [node name="QuitButton" type="Button" parent="CenterContainer/VBox"]
-custom_minimum_size = Vector2(200, 60)
-text = "退出游戏"
+custom_minimum_size = Vector2(280, 62)
+text = "🚪 退出游戏"
 size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
