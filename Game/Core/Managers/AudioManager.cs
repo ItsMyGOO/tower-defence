@@ -191,9 +191,9 @@ namespace TowerDefence.Core.Managers
 
         /// <summary>
         /// 在指定世界坐标实例化敌人击杀视觉特效，并在其播放完毕后自动销毁。
-        /// 支持 CPUParticles2D 与 GPUParticles2D：
-        /// - 若粒子节点存在 finished 信号（GPUParticles2D）：监听信号后 QueueFree
-        /// - 若粒子节点无 finished 信号（CPUParticles2D）：通过 GetProcessDeltaTime 估算粒子总时长后延迟销毁
+        /// 为避免"粒子生命周期结束后最后一帧残留闪烁"，所有销毁路径均采用
+        /// 「先淡出 Modulate.Alpha 到 0（0.08s）→ 再 QueueFree」的两阶段流程，
+        /// 确保视觉上平滑消失，无帧间闪烁残留。
         /// </summary>
         /// <param name="worldPosition">特效播放的世界坐标位置</param>
         private void SpawnDeathEffect(Vector2 worldPosition)
@@ -210,10 +210,7 @@ namespace TowerDefence.Core.Managers
                 gpuParticles.Emitting = true;
                 gpuParticles.Finished += () =>
                 {
-                    if (IsInstanceValid(effectInstance))
-                    {
-                        effectInstance.QueueFree();
-                    }
+                    FadeOutAndFree(effectInstance);
                 };
             }
             else if (effectInstance is CpuParticles2D cpuParticles)
@@ -224,10 +221,7 @@ namespace TowerDefence.Core.Managers
                     .TweenInterval(lifetime)
                     .Finished += () =>
                     {
-                        if (IsInstanceValid(effectInstance))
-                        {
-                            effectInstance.QueueFree();
-                        }
+                        FadeOutAndFree(effectInstance);
                     };
             }
             else
@@ -236,12 +230,36 @@ namespace TowerDefence.Core.Managers
                     .TweenInterval(2.0f)
                     .Finished += () =>
                     {
-                        if (IsInstanceValid(effectInstance))
-                        {
-                            effectInstance.QueueFree();
-                        }
+                        FadeOutAndFree(effectInstance);
                     };
             }
+        }
+
+        /// <summary>
+        /// 特效淡出辅助方法：先在 0.08 秒内线性将 Modulate.Alpha 降到 0，
+        /// 视觉完全透明后再调用 QueueFree 销毁节点，消除最后一帧残留闪烁。
+        /// </summary>
+        /// <param name="effectInstance">需要淡出销毁的特效节点</param>
+        private void FadeOutAndFree(Node2D effectInstance)
+        {
+            if (!IsInstanceValid(effectInstance)) return;
+
+            Color startModulate = effectInstance.Modulate;
+            Tween fadeTween = CreateTween();
+            fadeTween.TweenProperty(
+                    effectInstance,
+                    "modulate:a",
+                    0.0f,
+                    0.08f)
+                .SetTrans(Tween.TransitionType.Linear)
+                .SetEase(Tween.EaseType.InOut);
+            fadeTween.Finished += () =>
+            {
+                if (IsInstanceValid(effectInstance))
+                {
+                    effectInstance.QueueFree();
+                }
+            };
         }
 
         #endregion
