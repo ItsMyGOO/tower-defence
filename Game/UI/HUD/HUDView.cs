@@ -1,5 +1,6 @@
 using Godot;
 using TowerDefence.Core.AutoLoads;
+using TowerDefence.Gameplay.Economy;
 
 namespace TowerDefence.UI.HUD
 {
@@ -45,17 +46,27 @@ namespace TowerDefence.UI.HUD
 
         /// <summary>
         /// 节点被添加到场景树时调用。
-        /// 订阅 EventBus 金币、生命值、波次开始事件，并进行一次初始 UI 刷新。
+        /// 依次执行：Label/容器引用兜底解析 → 订阅 EventBus → 读取真实初始值刷新 UI。
+        /// 初始值刷新优先从 EconomyManager.Instance 直接读取（避免事件竞态导致初始显示为 0），
+        /// 兜底则显示预设安全默认值（金币0 / 血量0 / 波次1）。
         /// </summary>
         public override void _Ready()
         {
+            ResolveUINodeReferences();
+
             EventBus.OnGoldChanged += HandleGoldChanged;
             EventBus.OnPlayerHpChanged += HandlePlayerHpChanged;
             EventBus.OnWaveStarted += HandleWaveStarted;
 
-            RefreshGoldLabel(0);
-            RefreshHpLabel(0);
-            RefreshWaveLabel(0);
+            int initialGold = EconomyManager.Instance?.CurrentGold ?? 0;
+            int initialHp = EconomyManager.Instance?.CurrentHp ?? 0;
+            int initialWave = 0;
+
+            RefreshGoldLabel(initialGold);
+            RefreshHpLabel(initialHp);
+            RefreshWaveLabel(initialWave);
+
+            GD.Print($"[HUDView] 初始值刷新 → 金币:{initialGold}  血量:{initialHp}  波次:{initialWave + 1}");
         }
 
         /// <summary>
@@ -67,6 +78,34 @@ namespace TowerDefence.UI.HUD
             EventBus.OnGoldChanged -= HandleGoldChanged;
             EventBus.OnPlayerHpChanged -= HandlePlayerHpChanged;
             EventBus.OnWaveStarted -= HandleWaveStarted;
+        }
+
+        #endregion
+
+        #region UI 节点引用兜底解析
+
+        /// <summary>
+        /// 为所有 Export 的 UI 节点引用做 GetNode 兜底。
+        /// 场景中 Label/容器均挂载在 HUDView 直属的 TopBar / BottomBar 下，
+        /// 用相对路径即可可靠解析，不依赖 .tscn 文本中 NodePath 的序列化结果。
+        /// </summary>
+        private void ResolveUINodeReferences()
+        {
+            GoldLabel ??= GetNodeOrNull<Label>("TopBar/GoldLabel");
+            HpLabel ??= GetNodeOrNull<Label>("TopBar/HpLabel");
+            WaveLabel ??= GetNodeOrNull<Label>("TopBar/WaveLabel");
+            BuildButtonsContainer ??= GetNodeOrNull<Control>("BottomBar/BuildButtons");
+
+            int missing = 0;
+            if (GoldLabel == null) { GD.PrintErr("[HUDView] 兜底解析失败: GoldLabel"); missing++; }
+            if (HpLabel == null) { GD.PrintErr("[HUDView] 兜底解析失败: HpLabel"); missing++; }
+            if (WaveLabel == null) { GD.PrintErr("[HUDView] 兜底解析失败: WaveLabel"); missing++; }
+            if (BuildButtonsContainer == null) { GD.PrintErr("[HUDView] 兜底解析失败: BuildButtonsContainer"); missing++; }
+
+            if (missing == 0)
+            {
+                GD.Print("[HUDView] ✅ 4 个 UI 节点引用兜底解析全部成功。");
+            }
         }
 
         #endregion
