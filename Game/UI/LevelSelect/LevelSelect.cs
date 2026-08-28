@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Godot;
 using TowerDefence.Core.Managers;
 
@@ -33,6 +35,18 @@ namespace TowerDefence.UI.LevelSelect
         /// 获取或设置第 3 关选择按钮（占位，暂未实现，保持禁用）。
         /// </summary>
         [Export] public Button LevelButton_03 { get; set; }
+
+        #endregion
+
+        #region 内部状态 —— 委托引用缓存
+
+        /// <summary>
+        /// 关卡按钮点击回调的委托引用缓存。
+        /// 键为关卡序号（从 1 开始），值为绑定时创建的 Action 委托实例。
+        /// 由于 C# lambda 每次求值都会生成新的委托实例，必须在解绑时使用与绑定时完全相同的对象，
+        /// 否则 Godot.NativeCalls.Disconnect 会因找不到精确 callable 匹配而抛出 "Attempt to disconnect a nonexistent connection" 错误。
+        /// </summary>
+        private readonly Dictionary<int, Action> _levelButtonHandlerCache = new();
 
         #endregion
 
@@ -108,26 +122,43 @@ namespace TowerDefence.UI.LevelSelect
         #region 关卡按钮绑定与解绑
 
         /// <summary>
-        /// 为单个关卡按钮绑定点击回调。
-        /// 点击时通过 SceneManager.LoadLevel(levelIndex) 进入对应关卡。
+        /// 为单个关卡按钮绑定点击回调，并将创建的委托存入 <see cref="_levelButtonHandlerCache"/>。
+        /// 回调触发时通过 SceneManager.LoadLevel(levelIndex) 进入对应关卡。
+        /// 必须保证缓存中仅保存一份委托引用，解绑时才能与 Godot 端的 callable slot 精确匹配。
         /// </summary>
         /// <param name="button">目标按钮节点</param>
         /// <param name="levelIndex">按钮对应的关卡序号（从 1 开始）</param>
         private void BindLevelButton(Button button, int levelIndex)
         {
             if (button == null) return;
-            button.Pressed += () => HandleLevelPressed(levelIndex);
+            if (_levelButtonHandlerCache.ContainsKey(levelIndex))
+            {
+                GD.Print($"[LevelSelect] BindLevelButton 重复绑定关卡 {levelIndex}，跳过。");
+                return;
+            }
+
+            Action handler = () => HandleLevelPressed(levelIndex);
+            _levelButtonHandlerCache[levelIndex] = handler;
+            button.Pressed += handler;
         }
 
         /// <summary>
-        /// 对称解绑关卡按钮的点击回调，防止委托悬空。
+        /// 对称解绑关卡按钮的点击回调，从 <see cref="_levelButtonHandlerCache"/> 取出与绑定时完全一致的委托实例。
+        /// 若缓存中找不到对应委托（例如 _Ready 绑定失败后又触发了 _ExitTree），则静默跳过，
+        /// 避免 Godot 端抛出 "Attempt to disconnect a nonexistent connection" 错误。
         /// </summary>
         /// <param name="button">目标按钮节点</param>
-        /// <param name="levelIndex">按钮对应的关卡序号（日志用）</param>
+        /// <param name="levelIndex">按钮对应的关卡序号</param>
         private void UnbindLevelButton(Button button, int levelIndex)
         {
             if (button == null) return;
-            button.Pressed -= () => HandleLevelPressed(levelIndex);
+            if (!_levelButtonHandlerCache.TryGetValue(levelIndex, out var handler))
+            {
+                return;
+            }
+
+            button.Pressed -= handler;
+            _levelButtonHandlerCache.Remove(levelIndex);
         }
 
         #endregion
