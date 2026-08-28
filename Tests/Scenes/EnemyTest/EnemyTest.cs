@@ -185,9 +185,10 @@ namespace TowerDefence.Tests.Scenes
 		/// </summary>
 		/// <param name="enemyId">被击杀敌人的资源 ID</param>
 		/// <param name="goldReward">击杀奖励金币数</param>
-		private void HandleEnemyKilled(string enemyId, int goldReward)
+		/// <param name="deathPosition">敌人被击杀时的世界坐标位置</param>
+		private void HandleEnemyKilled(string enemyId, int goldReward, Vector2 deathPosition)
 		{
-			GD.Print($"[EnemyTest] ✅ OnEnemyKilled 事件触发！敌人: {enemyId}, 奖励金币: {goldReward}");
+			GD.Print($"[EnemyTest] ✅ OnEnemyKilled 事件触发！敌人: {enemyId}, 奖励金币: {goldReward}, 位置: {deathPosition}");
 		}
 	}
 }

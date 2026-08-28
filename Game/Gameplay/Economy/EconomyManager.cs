@@ -175,7 +175,8 @@ namespace TowerDefence.Gameplay.Economy
         /// </summary>
         /// <param name="enemyId">被击杀敌人的资源标识符（用于日志追踪，不参与经济计算）</param>
         /// <param name="goldReward">击杀该敌人获得的金币奖励</param>
-        private void HandleEnemyKilled(string enemyId, int goldReward)
+        /// <param name="deathPosition">敌人被击杀时的世界坐标位置（本模块忽略）</param>
+        private void HandleEnemyKilled(string enemyId, int goldReward, Vector2 deathPosition)
         {
             if (IsGameOver) return;
             if (goldReward <= 0) return;

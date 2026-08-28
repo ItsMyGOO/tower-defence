@@ -281,7 +281,10 @@ namespace TowerDefence.Gameplay.Waves
         /// 敌人被击杀时从存活计数中扣除 1 并检查波次是否结束。
         /// 注意：这里不关心具体是哪种敌人，只关心存活数量的变化。
         /// </summary>
-        private void HandleEnemyKilled(string enemyId, int goldReward)
+        /// <param name="enemyId">被击杀敌人的资源标识符（忽略）</param>
+        /// <param name="goldReward">击杀奖励金币（忽略）</param>
+        /// <param name="deathPosition">敌人被击杀时的世界坐标（忽略）</param>
+        private void HandleEnemyKilled(string enemyId, int goldReward, Vector2 deathPosition)
         {
             if (!IsWaveActive) return;
             if (AliveEnemyCount > 0) AliveEnemyCount--;

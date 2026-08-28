@@ -39,5 +39,10 @@ Level_01.tscn 采用四层节点树分区架构：World（Node2D）承载地图�
 ## Level_01 系统串联方案
 Level_01.cs 作为关卡控制器通过 `[Export]` 引用 WaveManager、GameManager、SlotsContainer 三个关键节点，在 _Ready 中通过 FirstWaveTimer 延迟调用 WaveManager.StartNextWave() 启动首波，波次完成时在 HandleWaveCompleted 回调中判断 AllWavesCompleted，非最后一波则通过 NextWaveTimer 再次触发 StartNextWave 实现波次无缝衔接；同时遍历 SlotsContainer 下所有 TowerSlot 动态追加 Area2D+CircleShape2D 点击检测体，左键点击时读取 TowerManager.Instance.CurrentSelectedTowerData 并调用 TryBuildTower 完成建造事务入口，填补了 TowerSlot 单一职责下缺少用户输入处理的空白，使选塔→点槽→扣费→建塔流程完整贯通。
 
+## AudioManager 音频与特效系统（EventBus 解耦触发）
+AudioManager 统一管理局内全部背景音乐与一次性音效，所有触发完全基于 EventBus 订阅：_Ready 时监听 OnTowerBuilt / OnEnemyKilled / OnEnemyReachedEnd / OnGameOver 四个事件，收到事件后立即播放对应 SFX 或实例化特效，AudioManager 自身不反向引用 TowerManager、Enemy、EconomyManager 等任何业务模块，新增成就或过场音效只需在该类内追加订阅即可，零侵入现有战斗流程。
+BGM 采用单个常驻 AudioStreamPlayer 子节点（命名 BGMPlayer）维护，_Ready 时自动创建并循环播放，GameOver 时通过 Tween 线性降低 VolumeDb 至静音后停止，避免结算音效与 BGM 互相遮挡；SFX 则采用按需动态实例化策略，每次 PlayOneShotSFX 时新建独立 AudioStreamPlayer 并加入 _activeSfxPlayers 集合追踪，监听其 Finished 信号后自动 QueueFree 并从集合移除，_ExitTree 时再对集合兜底强制释放，确保即使 Finished 信号因异常未触发也不会造成节点泄漏。
+击杀视觉特效采用 PackedScene 导出配置（EnemyDeathEffectScene），OnEnemyKilled 事件携带 deathPosition 世界坐标参数直接传入，在该位置 Instantiate 后挂入 AudioManager 自身节点树统一管理；针对 CPUParticles2D 与 GPUParticles2D 分别采用不同销毁策略：GPU 粒子监听 Finished 信号后销毁，CPU 粒子通过 Lifetime + Preprocess 估算总持续时间后用 TweenInterval 延迟销毁，未知类型则默认 2 秒兜底，保证特效播完即回收，节点计数始终回落至基准值 1（仅 BGMPlayer 常驻）。
+
 ## 垂直切片闭环设计思考
 首关垂直切片的完整数据流为：HUD 建造按钮被点击 → TowerBuildButton 将 TowerData 写入 CurrentSelectedTowerData → 玩家点击 TowerSlot → Level_01 转发给 TowerManager.TryBuildTower → EconomyManager 扣金币并广播 OnGoldChanged → 塔实例挂载后广播 OnTowerBuilt → HUD 按钮与金币标签同步刷新；战斗链路则由 WaveManager 按 WaveData 配置定时生成 Enemy 挂载至 Path2D → Enemy 沿路径移动或被 Tower 攻击击杀 → OnEnemyKilled / OnEnemyReachedEnd 分别触发金币回流 / HP 扣除 → HP 归零或 AllWavesCompleted 时任一路径触发 OnGameOver → GameManager 冻结时钟并由 GameOverPanel 弹出结算；整个闭环零硬编码引用，所有跨模块交互统一走 EventBus，新增系统（如成就、音效）只需订阅对应事件即可无缝接入而无需修改现有模块。

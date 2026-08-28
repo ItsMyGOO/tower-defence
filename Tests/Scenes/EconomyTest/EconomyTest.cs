@@ -125,12 +125,12 @@ namespace TowerDefence.Tests.Scenes
             {
                 case 1:
                     GD.Print($"[EconomyTest] --- Step {_testStep}: 模拟敌人击杀 (奖励 {TestKillReward} 金币) ---");
-                    EventBus.RaiseEnemyKilled("TestEnemy_A", TestKillReward);
+                    EventBus.RaiseEnemyKilled("TestEnemy_A", TestKillReward, new Vector2(100, 200));
                     break;
 
                 case 2:
                     GD.Print($"[EconomyTest] --- Step {_testStep}: 再次模拟敌人击杀 (奖励 {TestKillReward} 金币) ---");
-                    EventBus.RaiseEnemyKilled("TestEnemy_B", TestKillReward);
+                    EventBus.RaiseEnemyKilled("TestEnemy_B", TestKillReward, new Vector2(200, 300));
                     break;
 
                 case 3:
@@ -142,7 +142,7 @@ namespace TowerDefence.Tests.Scenes
 
                 case 4:
                     GD.Print($"[EconomyTest] --- Step {_testStep}: 第三次模拟敌人击杀 (奖励 {TestKillReward} 金币) ---");
-                    EventBus.RaiseEnemyKilled("TestEnemy_C", TestKillReward);
+                    EventBus.RaiseEnemyKilled("TestEnemy_C", TestKillReward, new Vector2(300, 400));
                     break;
 
                 case 5:
@@ -166,7 +166,7 @@ namespace TowerDefence.Tests.Scenes
 
                 case 8:
                     GD.Print($"[EconomyTest] --- Step {_testStep}: GameOver 后再次尝试击杀/逃脱 (预期无变更) ---");
-                    EventBus.RaiseEnemyKilled("TestEnemy_AfterOver", 9999);
+                    EventBus.RaiseEnemyKilled("TestEnemy_AfterOver", 9999, new Vector2(500, 600));
                     EventBus.RaiseEnemyReachedEnd(9999);
                     break;
 

@@ -1,0 +1,85 @@
+[gd_scene load_steps=4 format=3 uid="uid://audio_test_scene"]
+
+[ext_resource type="Script" path="res://Tests/Scenes/AudioTest/AudioTest.cs" id="1_audiotest_script"]
+[ext_resource type="Script" path="res://Game/Core/Managers/AudioManager.cs" id="2_audio_manager"]
+[ext_resource type="PackedScene" path="res://Game/Gameplay/Effects/EnemyDeathEffect.tscn" id="3_death_effect"]
+
+[node name="AudioTestRoot" type="Node2D" unique_id=1000000001 node_paths=PackedStringArray("AudioManagerNode", "NodeCounterLabel")]
+script = ExtResource("1_audiotest_script")
+AudioManagerNode = NodePath("Systems/AudioManager")
+NodeCounterLabel = NodePath("UI/NodeCounterLabel")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1000000002]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.1, 0.1, 0.15, 1)
+
+[node name="Systems" type="Node" parent="." unique_id=1000000003]
+
+[node name="AudioManager" type="Node" parent="Systems" unique_id=1000000004]
+script = ExtResource("2_audio_manager")
+EnemyDeathEffectScene = ExtResource("3_death_effect")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1000000005]
+
+[node name="TitleLabel" type="Label" parent="UI" unique_id=1000000006]
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 1240.0
+offset_bottom = 80.0
+text = "AudioManager & Effects 测试场景 —— 点击下方按钮触发各 EventBus 事件"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 26
+
+[node name="NodeCounterLabel" type="Label" parent="UI" unique_id=1000000007]
+offset_left = 800.0
+offset_top = 100.0
+offset_right = 1240.0
+offset_bottom = 160.0
+text = "AudioManager 子节点数: 0"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.6, 1, 0.6, 1)
+
+[node name="ButtonsPanel" type="VBoxContainer" parent="UI" unique_id=1000000008]
+offset_left = 440.0
+offset_top = 150.0
+offset_right = 840.0
+offset_bottom = 520.0
+theme_override_constants/separation = 20
+
+[node name="BtnTowerBuilt" type="Button" parent="UI/ButtonsPanel" unique_id=1000000009]
+custom_minimum_size = Vector2(400, 60)
+text = "① 测试 建塔音效 (OnTowerBuilt)"
+theme_override_font_sizes/font_size = 18
+
+[node name="BtnEnemyKilled" type="Button" parent="UI/ButtonsPanel" unique_id=1000000010]
+custom_minimum_size = Vector2(400, 60)
+text = "② 测试 击杀音效+粒子特效 (OnEnemyKilled)"
+theme_override_font_sizes/font_size = 18
+
+[node name="BtnEnemyReachedEnd" type="Button" parent="UI/ButtonsPanel" unique_id=1000000011]
+custom_minimum_size = Vector2(400, 60)
+text = "③ 测试 漏怪/扣血音效 (OnEnemyReachedEnd)"
+theme_override_font_sizes/font_size = 18
+
+[node name="BtnGameOverWin" type="Button" parent="UI/ButtonsPanel" unique_id=1000000012]
+custom_minimum_size = Vector2(400, 60)
+text = "④ 测试 胜利结算音效+BGM淡出 (OnGameOver=true)"
+theme_override_font_sizes/font_size = 18
+
+[node name="BtnGameOverLose" type="Button" parent="UI/ButtonsPanel" unique_id=1000000013]
+custom_minimum_size = Vector2(400, 60)
+text = "⑤ 测试 失败结算音效+BGM淡出 (OnGameOver=false)"
+theme_override_font_sizes/font_size = 18
+
+[node name="HintLabel" type="Label" parent="UI" unique_id=1000000014]
+offset_left = 40.0
+offset_top = 560.0
+offset_right = 1240.0
+offset_bottom = 680.0
+text = "提示：\n• 点击第②个按钮后，观察屏幕中央是否出现橙红色爆炸粒子，粒子播放结束后应自动消失。\n• 右上角「AudioManager 子节点数」在 SFX/特效结束后应回到基准值 1（仅 BGMPlayer 常驻）。\n• 若数值持续增长则说明存在节点泄漏，需检查 AudioManager 回收逻辑。\n• 音效字段留空则静默不报错，可在 Inspector 中为 AudioManager 挂载真实 .ogg/.wav 音频资源。"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+autowrap_mode = 3

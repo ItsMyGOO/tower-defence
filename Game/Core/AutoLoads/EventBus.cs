@@ -56,7 +56,8 @@ namespace TowerDefence.Core.AutoLoads
         /// </summary>
         /// <param name="enemyId">被击杀敌人的资源标识符或配置 ID</param>
         /// <param name="goldReward">击杀该敌人获得的金币奖励</param>
-        public static event Action<string, int> OnEnemyKilled;
+        /// <param name="deathPosition">敌人被击杀时的世界坐标位置，用于播放击杀特效</param>
+        public static event Action<string, int, Vector2> OnEnemyKilled;
 
         /// <summary>
         /// 当敌人沿路径移动至尽头（未被击杀、成功逃脱）时触发。
@@ -127,7 +128,8 @@ namespace TowerDefence.Core.AutoLoads
         /// </summary>
         /// <param name="enemyId">被击杀敌人的资源标识符或配置 ID</param>
         /// <param name="goldReward">击杀该敌人获得的金币奖励</param>
-        public static void RaiseEnemyKilled(string enemyId, int goldReward) => OnEnemyKilled?.Invoke(enemyId, goldReward);
+        /// <param name="deathPosition">敌人被击杀时的世界坐标位置</param>
+        public static void RaiseEnemyKilled(string enemyId, int goldReward, Vector2 deathPosition) => OnEnemyKilled?.Invoke(enemyId, goldReward, deathPosition);
 
         /// <summary>
         /// 发布敌人走到路径尽头事件。

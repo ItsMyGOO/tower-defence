@@ -101,7 +101,7 @@ namespace TowerDefence.Gameplay.Enemies
 
             if (CurrentHp <= 0.0f)
             {
-                EventBus.RaiseEnemyKilled(Data.EnemyId, Data.RewardGold);
+                EventBus.RaiseEnemyKilled(Data.EnemyId, Data.RewardGold, GlobalPosition);
                 QueueFree();
             }
         }

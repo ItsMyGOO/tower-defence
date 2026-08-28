@@ -386,9 +386,12 @@ namespace TowerDefence.Gameplay.Map
 		/// <summary>
 		/// 敌人击杀事件：仅用于流程日志，金币已由 EconomyManager 处理。
 		/// </summary>
-		private void HandleEnemyKilled(string enemyId, int goldReward)
+		/// <param name="enemyId">被击杀敌人的资源标识符</param>
+		/// <param name="goldReward">击杀奖励金币数</param>
+		/// <param name="deathPosition">敌人被击杀时的世界坐标位置</param>
+		private void HandleEnemyKilled(string enemyId, int goldReward, Vector2 deathPosition)
 		{
-			GD.Print($"[Level_01] 💀 敌人被击杀: {enemyId} | 奖励金币 +{goldReward}");
+			GD.Print($"[Level_01] 💀 敌人被击杀: {enemyId} | 奖励金币 +{goldReward} @ {deathPosition}");
 		}
 
 		/// <summary>
