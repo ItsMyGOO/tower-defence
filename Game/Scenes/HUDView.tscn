@@ -10,13 +10,15 @@ script = ExtResource("1_hud_script")
 GoldLabel = NodePath("TopBar/GoldLabel")
 HpLabel = NodePath("TopBar/HpLabel")
 WaveLabel = NodePath("TopBar/WaveLabel")
+PauseButton = NodePath("TopBar/PauseButton")
 BuildButtonsContainer = NodePath("BottomBar/BuildButtons")
 
 [node name="TopBar" type="HBoxContainer" parent="."]
 offset_left = 20.0
 offset_top = 20.0
-offset_right = 500.0
+offset_right = 1260.0
 offset_bottom = 60.0
+theme_override_constants/separation = 24
 
 [node name="GoldLabel" type="Label" parent="TopBar"]
 custom_minimum_size = Vector2(120, 0)
@@ -32,6 +34,13 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(120, 0)
 text = "波次: 1"
 horizontal_alignment = 1
+
+[node name="TopBarSpacer" type="Control" parent="TopBar"]
+size_flags_horizontal = 3
+
+[node name="PauseButton" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(120, 40)
+text = "⏸️ 暂停"
 
 [node name="BottomBar" type="HBoxContainer" parent="."]
 offset_left = 20.0

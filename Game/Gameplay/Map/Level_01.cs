@@ -263,9 +263,12 @@ namespace TowerDefence.Gameplay.Map
 		/// - 不依赖 CanvasLayer / Viewport 传播顺序；
 		/// - HUD（CanvasLayer）按下的按钮事件已消费，不会误触发；
 		/// - 任何时候都能 100% 命中碰撞体。
+		/// 当全局处于 Paused 状态（暂停菜单 / 结算前一刻）时直接短路返回，
+		/// 避免玩家暂停后仍能点击槽位触发建造导致的状态残留。
 		/// </summary>
 		public override void _Input(InputEvent @event)
 		{
+			if (GetTree().Paused) return;
 			if (@event is not InputEventMouseButton mouseBtn) return;
 			if (mouseBtn.ButtonIndex != MouseButton.Left || !mouseBtn.Pressed) return;
 

@@ -254,9 +254,12 @@ namespace TowerDefence.Gameplay.Map
 
 		/// <summary>
 		/// 全局输入回调：当鼠标左键按下时，从视口做射线，命中 TowerSlot 下的 Area2D 碰撞体即触发建造。
+		/// 当全局处于 Paused 状态（暂停菜单 / 结算前一刻）时直接短路返回，
+		/// 避免玩家暂停后仍能点击槽位触发建造导致的状态残留。
 		/// </summary>
 		public override void _Input(InputEvent @event)
 		{
+			if (GetTree().Paused) return;
 			if (@event is not InputEventMouseButton mouseBtn) return;
 			if (mouseBtn.ButtonIndex != MouseButton.Left || !mouseBtn.Pressed) return;
 
