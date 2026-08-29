@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://s4d4m30wag82"]
 
-[ext_resource type="Script" uid="uid://nvmxbob5gbab" path="res://Game/Gameplay/Map/Level_01.cs" id="1_level_script"]
+[ext_resource type="Script" uid="uid://level_common_script" path="res://Game/Gameplay/Map/Level.cs" id="1_level_script"]
 [ext_resource type="Script" uid="uid://dgevr8wd70vuu" path="res://Game/Gameplay/Economy/EconomyManager.cs" id="2_economy_manager"]
 [ext_resource type="Script" uid="uid://b6fyk2pm3x8hi" path="res://Game/Gameplay/Waves/WaveManager.cs" id="3_wave_manager"]
 [ext_resource type="Script" uid="uid://81xv8r23aloi" path="res://Game/Gameplay/Towers/TowerManager.cs" id="4_tower_manager"]
@@ -23,6 +23,12 @@
 
 [node name="Level_01" type="Node2D" unique_id=1141078503]
 script = ExtResource("1_level_script")
+LevelDisplayName = "第一关：新手草原"
+FirstWaveAutoStartDelay = 3.0
+NextWaveAutoStartDelay = 3.0
+InitialGold = 150
+InitialMaxHp = 10
+PathControlPoints = PackedVector2Array(0, 0, 400, 0, 400, -150, 800, -150, 800, 150, 1200, 150)
 
 [node name="World" type="Node2D" parent="." unique_id=999383796]
 

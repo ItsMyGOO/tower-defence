@@ -35,6 +35,13 @@ namespace TowerDefence.UI.Panels
         [Export] public Button LevelSelectButton { get; set; }
 
         /// <summary>
+        /// 获取或设置"返回主菜单"按钮节点引用。
+        /// 胜利或失败时均可见，点击后调用 SceneManager.LoadMainMenu() 回到 Meta Loop 起点。
+        /// 这是关卡结束 → 主界面闭环的直接入口，也是战败/胜利后玩家的常用出口之一。
+        /// </summary>
+        [Export] public Button MainMenuButton { get; set; }
+
+        /// <summary>
         /// 获取或设置"下一关"按钮节点引用。
         /// 仅在玩家胜利且存在下一已解锁关卡时可见并可交互，
         /// 点击后通过 SceneManager.LoadNextLevel() 自动载入下一关。
@@ -42,7 +49,7 @@ namespace TowerDefence.UI.Panels
         [Export] public Button NextLevelButton { get; set; }
 
         /// <summary>
-        /// 获取或设置退出/主菜单按钮节点引用。
+        /// 获取或设置退出游戏按钮节点引用。
         /// 点击后在编辑器模式打印提示，在打包模式下调用 Quit 退出应用程序。
         /// </summary>
         [Export] public Button QuitButton { get; set; }
@@ -64,9 +71,15 @@ namespace TowerDefence.UI.Panels
         /// <summary>
         /// 节点被添加到场景树时调用。
         /// 初始化面板为隐藏状态，订阅 EventBus.OnGameOver 事件，并绑定所有按钮点击回调。
+        /// 关键点：立即将自身 ProcessMode 设置为 Always，并递归所有子节点同样设为 Always；
+        /// 因为 HandleGameOver 触发后会调用 GetTree().Paused=true，默认 ProcessMode=Inherit 的节点无法接收 GUI 事件，
+        /// 不提前设置会导致结算面板弹出后「全部按钮点不动」的同样现象。
         /// </summary>
         public override void _Ready()
         {
+            ProcessMode = ProcessModeEnum.Always;
+            SetDescendantsProcessModeAlways(this);
+            ResolveUINodeReferences();
             HidePanel();
 
             EventBus.OnGameOver += HandleGameOver;
@@ -79,6 +92,11 @@ namespace TowerDefence.UI.Panels
             if (LevelSelectButton != null)
             {
                 LevelSelectButton.Pressed += HandleLevelSelectPressed;
+            }
+
+            if (MainMenuButton != null)
+            {
+                MainMenuButton.Pressed += HandleMainMenuPressed;
             }
 
             if (NextLevelButton != null)
@@ -108,6 +126,11 @@ namespace TowerDefence.UI.Panels
             if (LevelSelectButton != null)
             {
                 LevelSelectButton.Pressed -= HandleLevelSelectPressed;
+            }
+
+            if (MainMenuButton != null)
+            {
+                MainMenuButton.Pressed -= HandleMainMenuPressed;
             }
 
             if (NextLevelButton != null)
@@ -207,6 +230,18 @@ namespace TowerDefence.UI.Panels
         }
 
         /// <summary>
+        /// 处理"返回主菜单"按钮点击事件。
+        /// 解除全局暂停状态，并通过 SceneManager.LoadMainMenu() 回到 Meta Loop 起点。
+        /// 这是关卡结束 → 主界面闭环的直接出口，无论胜负都可点击。
+        /// </summary>
+        private void HandleMainMenuPressed()
+        {
+            GD.Print("[GameOverPanel] 玩家点击「返回主菜单」，将重置 CurrentLevelIndex = 0 并切回主界面。");
+            GetTree().Paused = false;
+            SceneManager.Instance?.LoadMainMenu();
+        }
+
+        /// <summary>
         /// 处理"下一关"按钮点击事件。
         /// 仅在最近一次为胜利状态时执行 LoadNextLevel，避免战败后误进入下一关。
         /// </summary>
@@ -257,6 +292,7 @@ namespace TowerDefence.UI.Panels
             if (TitleLabel != null) TitleLabel.Visible = true;
             if (RestartButton != null) RestartButton.Visible = true;
             if (LevelSelectButton != null) LevelSelectButton.Visible = true;
+            if (MainMenuButton != null) MainMenuButton.Visible = true;
             if (QuitButton != null) QuitButton.Visible = true;
             if (NextLevelButton != null)
             {
@@ -274,8 +310,65 @@ namespace TowerDefence.UI.Panels
             if (TitleLabel != null) TitleLabel.Visible = false;
             if (RestartButton != null) RestartButton.Visible = false;
             if (LevelSelectButton != null) LevelSelectButton.Visible = false;
+            if (MainMenuButton != null) MainMenuButton.Visible = false;
             if (NextLevelButton != null) NextLevelButton.Visible = false;
             if (QuitButton != null) QuitButton.Visible = false;
+        }
+
+        #endregion
+
+        #region 内部辅助 —— UI 节点引用兜底解析
+
+        /// <summary>
+        /// 为所有 Export 的 UI 节点引用做 GetNodeOrNull 兜底。
+        /// Godot 4.x 的 C# [Export] 属性在 .tscn 文本中以 PascalCase 直接赋值 NodePath 时，
+        /// 脚本桥接层偶尔会因字段名序列化不一致而读到 null（表现为按钮有交互视觉反馈但点击逻辑完全不执行）。
+        /// 兜底用相对路径解析，保证即使 .tscn 的 NodePath 没映射上也能 100% 拿到引用。
+        /// </summary>
+        private void ResolveUINodeReferences()
+        {
+            TitleLabel ??= GetNodeOrNull<Label>("CenterContainer/VBox/TitleLabel");
+            RestartButton ??= GetNodeOrNull<Button>("CenterContainer/VBox/RestartButton");
+            LevelSelectButton ??= GetNodeOrNull<Button>("CenterContainer/VBox/LevelSelectButton");
+            MainMenuButton ??= GetNodeOrNull<Button>("CenterContainer/VBox/MainMenuButton");
+            NextLevelButton ??= GetNodeOrNull<Button>("CenterContainer/VBox/NextLevelButton");
+            QuitButton ??= GetNodeOrNull<Button>("CenterContainer/VBox/QuitButton");
+
+            int missing = 0;
+            if (TitleLabel == null) { GD.PrintErr("[GameOverPanel] 兜底解析失败: TitleLabel"); missing++; }
+            if (RestartButton == null) { GD.PrintErr("[GameOverPanel] 兜底解析失败: RestartButton"); missing++; }
+            if (LevelSelectButton == null) { GD.PrintErr("[GameOverPanel] 兜底解析失败: LevelSelectButton"); missing++; }
+            if (MainMenuButton == null) { GD.PrintErr("[GameOverPanel] 兜底解析失败: MainMenuButton"); missing++; }
+            if (NextLevelButton == null) { GD.PrintErr("[GameOverPanel] 兜底解析失败: NextLevelButton"); missing++; }
+            if (QuitButton == null) { GD.PrintErr("[GameOverPanel] 兜底解析失败: QuitButton"); missing++; }
+
+            if (missing == 0)
+            {
+                GD.Print("[GameOverPanel] ✅ TitleLabel + 6 个按钮引用兜底解析全部成功，Pressed 回调已可绑定。");
+            }
+        }
+
+        #endregion
+
+        #region 内部辅助 —— ProcessMode 递归设置
+
+        /// <summary>
+        /// 递归将 root 节点及所有子孙的 ProcessMode 设置为 Always。
+        /// 结算面板在 HandleGameOver 后会调用 GetTree().Paused=true，
+        /// 默认 ProcessMode=Inherit 的节点无法接收 _GuiInput，导致所有按钮点了没反应。
+        /// 该方法递归设置 Background / CenterContainer / VBoxContainer / 所有 Label 与 Button
+        /// 的 ProcessMode=Always，保证暂停态下结算面板的所有按钮交互正常工作。
+        /// </summary>
+        /// <param name="root">遍历起点（含自身）</param>
+        private void SetDescendantsProcessModeAlways(Node root)
+        {
+            if (root == null) return;
+            root.ProcessMode = ProcessModeEnum.Always;
+            int count = root.GetChildCount();
+            for (int i = 0; i < count; i++)
+            {
+                SetDescendantsProcessModeAlways(root.GetChild(i));
+            }
         }
 
         #endregion
