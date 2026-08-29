@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://level_02_scene"]
 
-[ext_resource type="Script" path="res://Game/Gameplay/Map/Level_02.cs" id="1_level_script"]
+[ext_resource type="Script" uid="uid://level_common_script" path="res://Game/Gameplay/Map/Level.cs" id="1_level_script"]
 [ext_resource type="Script" path="res://Game/Gameplay/Economy/EconomyManager.cs" id="2_economy_manager"]
 [ext_resource type="Script" path="res://Game/Gameplay/Waves/WaveManager.cs" id="3_wave_manager"]
 [ext_resource type="Script" path="res://Game/Gameplay/Towers/TowerManager.cs" id="4_tower_manager"]
@@ -22,6 +22,12 @@
 
 [node name="Level_02" type="Node2D"]
 script = ExtResource("1_level_script")
+LevelDisplayName = "第二关：S形回廊"
+FirstWaveAutoStartDelay = 2.5
+NextWaveAutoStartDelay = 2.5
+InitialGold = 200
+InitialMaxHp = 10
+PathControlPoints = PackedVector2Array(0, 0, 320, 0, 320, -200, 640, -200, 640, 200, 960, 200, 960, -80, 1280, -80)
 
 [node name="World" type="Node2D" parent="."]
 
