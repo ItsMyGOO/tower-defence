@@ -17,6 +17,7 @@
 [ext_resource type="Resource" path="res://Game/Config/Waves/Wave_04.tres" id="14_wave_04"]
 [ext_resource type="Script" path="res://Game/Core/Managers/AudioManager.cs" id="15_audio_manager"]
 [ext_resource type="PackedScene" path="res://Game/Gameplay/Effects/EnemyDeathEffect.tscn" id="16_death_effect"]
+[ext_resource type="Script" path="res://Game/Core/Managers/EffectsManager.cs" id="17_effects_manager"]
 
 [sub_resource type="Curve2D" id="Curve2D_1"]
 
@@ -176,6 +177,9 @@ script = ExtResource("5_game_manager")
 
 [node name="AudioManager" type="Node" parent="Systems" unique_id=2926474565]
 script = ExtResource("15_audio_manager")
+
+[node name="EffectsManager" type="Node" parent="Systems" unique_id=3926474566]
+script = ExtResource("17_effects_manager")
 EnemyDeathEffectScene = ExtResource("16_death_effect")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=710558157]

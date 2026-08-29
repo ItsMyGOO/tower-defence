@@ -6,11 +6,11 @@ using TowerDefence.Core.AutoLoads;
 namespace TowerDefence.Core.Managers
 {
     /// <summary>
-    /// 全局音频与视觉反馈管理器。
-    /// 负责背景音乐循环播放、事件驱动的一次性音效动态实例化与自动回收，
-    /// 以及敌人击杀时的粒子特效实例化与生命周期管理。
-    /// 建议挂载到主场景 Systems 节点下，所有音频与特效完全通过 EventBus 解耦触发，
-    /// 与 Gameplay、经济、UI 等模块无硬编码引用。
+    /// 全局音频管理器（单一职责版）。
+    /// 仅负责背景音乐循环播放、事件驱动的一次性音效动态实例化与自动回收；
+    /// 视觉粒子特效、震屏等反馈由 EffectsManager 独立管理，避免职责混杂。
+    /// 建议挂载到主场景 Systems 节点下，所有音频完全通过 EventBus 解耦触发，
+    /// 与 Gameplay、经济、UI、特效等模块无硬编码引用。
     /// </summary>
     public partial class AudioManager : Node
     {
@@ -54,17 +54,6 @@ namespace TowerDefence.Core.Managers
 
         #endregion
 
-        #region 导出配置 —— 特效资源
-
-        /// <summary>
-        /// 获取或设置敌人被击杀时播放的视觉特效预制体场景。
-        /// 推荐使用 CPUParticles2D / GPUParticles2D 并勾选 "One Shot"，
-        /// AudioManager 会在粒子结束后自动 QueueFree 回收节点。
-        /// </summary>
-        [Export] public PackedScene EnemyDeathEffectScene { get; set; }
-
-        #endregion
-
         #region 运行时内部节点
 
         /// <summary>
@@ -86,7 +75,7 @@ namespace TowerDefence.Core.Managers
 
         /// <summary>
         /// 节点被添加到场景树时调用。
-        /// 创建内部 BGM 播放器并启动背景音乐，随后订阅 EventBus 中与音效/特效触发相关的全部事件。
+        /// 创建内部 BGM 播放器并启动背景音乐，随后订阅 EventBus 中与音频触发相关的事件。
         /// </summary>
         public override void _Ready()
         {
@@ -187,83 +176,6 @@ namespace TowerDefence.Core.Managers
 
         #endregion
 
-        #region 击杀特效实例化与回收
-
-        /// <summary>
-        /// 在指定世界坐标实例化敌人击杀视觉特效，并在其播放完毕后自动销毁。
-        /// 为避免"粒子生命周期结束后最后一帧残留闪烁"，所有销毁路径均采用
-        /// 「先淡出 Modulate.Alpha 到 0（0.08s）→ 再 QueueFree」的两阶段流程，
-        /// 确保视觉上平滑消失，无帧间闪烁残留。
-        /// </summary>
-        /// <param name="worldPosition">特效播放的世界坐标位置</param>
-        private void SpawnDeathEffect(Vector2 worldPosition)
-        {
-            if (EnemyDeathEffectScene == null) return;
-
-            Node2D effectInstance = EnemyDeathEffectScene.Instantiate<Node2D>();
-            effectInstance.GlobalPosition = worldPosition;
-            effectInstance.Name = "EnemyDeathEffect";
-            AddChild(effectInstance);
-
-            if (effectInstance is GpuParticles2D gpuParticles)
-            {
-                gpuParticles.Emitting = true;
-                gpuParticles.Finished += () =>
-                {
-                    FadeOutAndFree(effectInstance);
-                };
-            }
-            else if (effectInstance is CpuParticles2D cpuParticles)
-            {
-                cpuParticles.Emitting = true;
-                float lifetime = (float)cpuParticles.Lifetime + (float)cpuParticles.Preprocess;
-                CreateTween()
-                    .TweenInterval(lifetime)
-                    .Finished += () =>
-                    {
-                        FadeOutAndFree(effectInstance);
-                    };
-            }
-            else
-            {
-                CreateTween()
-                    .TweenInterval(2.0f)
-                    .Finished += () =>
-                    {
-                        FadeOutAndFree(effectInstance);
-                    };
-            }
-        }
-
-        /// <summary>
-        /// 特效淡出辅助方法：先在 0.08 秒内线性将 Modulate.Alpha 降到 0，
-        /// 视觉完全透明后再调用 QueueFree 销毁节点，消除最后一帧残留闪烁。
-        /// </summary>
-        /// <param name="effectInstance">需要淡出销毁的特效节点</param>
-        private void FadeOutAndFree(Node2D effectInstance)
-        {
-            if (!IsInstanceValid(effectInstance)) return;
-
-            Color startModulate = effectInstance.Modulate;
-            Tween fadeTween = CreateTween();
-            fadeTween.TweenProperty(
-                    effectInstance,
-                    "modulate:a",
-                    0.0f,
-                    0.08f)
-                .SetTrans(Tween.TransitionType.Linear)
-                .SetEase(Tween.EaseType.InOut);
-            fadeTween.Finished += () =>
-            {
-                if (IsInstanceValid(effectInstance))
-                {
-                    effectInstance.QueueFree();
-                }
-            };
-        }
-
-        #endregion
-
         #region EventBus 事件处理
 
         /// <summary>
@@ -279,15 +191,14 @@ namespace TowerDefence.Core.Managers
 
         /// <summary>
         /// 处理敌人被击杀事件。
-        /// 播放 SFXEnemyKilled 音效，并在 deathPosition 位置实例化 EnemyDeathEffectScene 视觉特效。
+        /// 播放 SFXEnemyKilled 音效；视觉特效由 EffectsManager 通过同一事件独立触发，两者完全解耦。
         /// </summary>
         /// <param name="enemyId">被击杀敌人的资源标识符（仅用于匹配事件签名，本模块不使用）</param>
         /// <param name="goldReward">击杀该敌人获得的金币奖励（仅用于匹配事件签名，本模块不使用）</param>
-        /// <param name="deathPosition">敌人被击杀时的世界坐标，用于特效定位</param>
+        /// <param name="deathPosition">敌人被击杀时的世界坐标（仅用于匹配事件签名，本模块不使用）</param>
         private void HandleEnemyKilled(string enemyId, int goldReward, Vector2 deathPosition)
         {
             PlayOneShotSFX(SFXEnemyKilled);
-            SpawnDeathEffect(deathPosition);
         }
 
         /// <summary>
