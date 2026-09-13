@@ -55,6 +55,8 @@ namespace TowerDefence.Tests.Scenes
                 await TestTargetingModes(enemyData);
                 await TestProjectileDelivery(enemyData);
                 await TestTracerVisual(enemyData);
+                await TestSlotClickPipeline();
+                await TestBeamLaser(enemyData);
                 await TestSell();
 
                 GD.Print($"[TowerBehaviorTest] ========== 测试结束：PASS {_passed} / FAIL {_failed} ==========");
@@ -327,7 +329,122 @@ namespace TowerDefence.Tests.Scenes
         }
 
         /// <summary>
-        /// 场景 6：出售。按 SellRefundRatio 返还金币并释放槽位。
+        /// 场景 6：槽位点击全链路（经视口 push_input 分发，与真实鼠标事件同一链路，
+        /// 回归「点击建造位置无反应」缺陷——占位 Control 吞事件导致物理拾取失效的问题）。
+        /// </summary>
+        private async System.Threading.Tasks.Task TestSlotClickPipeline()
+        {
+            var towerManager = new TowerManager { Name = "TestTowerManager" };
+            AddChild(towerManager);
+
+            var towerData = new TowerData
+            {
+                TowerId = "test_click",
+                TowerName = "测试点击塔",
+                BuildCost = 50,
+                SellRefundRatio = 0.5f
+            };
+            TowerManager.Instance.CurrentSelectedTowerData = towerData;
+
+            var slot = new TowerSlot { Name = "ClickTestSlot", Position = new Vector2(300, 300) };
+            AddChild(slot);
+            await Wait(0.1f);
+
+            int goldBefore = _economy.CurrentGold;
+
+            // 事件坐标是窗口坐标：引擎分发到 _Input 前会经 GetFinalTransform 的逆变换
+            // 转为视口坐标（无头窗口存在内容缩放，真机 1280x720 下为恒等），故此处需正向变换反推窗口坐标
+            Vector2 slotWindowPos = GetViewport().GetFinalTransform() * slot.GlobalPosition;
+
+            var press = new InputEventMouseButton
+            {
+                ButtonIndex = MouseButton.Left,
+                Pressed = true,
+                Position = slotWindowPos
+            };
+            Input.ParseInputEvent(press);
+            Input.FlushBufferedEvents();
+            await Wait(0.2f);
+
+            AssertTrue(slot.IsOccupied, "点击: 左键点击槽位完成建造");
+            AssertTrue(_economy.CurrentGold == goldBefore - 50, "点击: 建造正确扣费");
+
+            var rightPress = new InputEventMouseButton
+            {
+                ButtonIndex = MouseButton.Right,
+                Pressed = true,
+                Position = slotWindowPos
+            };
+            Input.ParseInputEvent(rightPress);
+            Input.FlushBufferedEvents();
+            await Wait(0.2f);
+
+            AssertTrue(!slot.IsOccupied, "点击: 右键点击槽位出售");
+            AssertTrue(_economy.CurrentGold == goldBefore - 50 + 25, "点击: 出售返还金币");
+
+            slot.QueueFree();
+            await Wait(0.1f);
+        }
+
+        /// <summary>
+        /// 场景 7：激光塔（Mode = Beam）。光束锁定最前线目标持续伤害，
+        /// 击杀后自动切换到下一个目标，锁定期间存在光束 Line2D。
+        /// </summary>
+        private async System.Threading.Tasks.Task TestBeamLaser(EnemyData enemyData)
+        {
+            var e1 = SpawnEnemy(enemyData, 100);
+            var e2 = SpawnEnemy(enemyData, 60);
+
+            var data = new TowerData
+            {
+                TowerId = "test_beam",
+                TowerName = "测试激光塔",
+                Kind = TowerKind.Single,
+                Targeting = TargetingMode.First,
+                Mode = AttackMode.Beam,
+                AttackRange = 500f,
+                Damage = 100f,
+                AttackInterval = 0.5f,
+                BeamWidth = 4.0f
+            };
+            var tower = SpawnTower(data, new Vector2(130, 40));
+
+            await Wait(0.3f);
+            AssertTrue(ReferenceEquals(tower.BeamTarget, e1), "激光: 光束锁定推进最远的目标");
+            AssertTrue(e1.CurrentHp < enemyData.MaxHp && e1.CurrentHp > 0, "激光: 持续伤害进行中（非瞬杀）");
+            AssertTrue(HasBeamLine(tower), "激光: 锁定期间存在光束 Line2D");
+
+            // DPS 100 对 100 血敌人约 1.0s 击杀；随后光束应自动切换到 60 血的第二个目标
+            await Wait(1.2f);
+            AssertTrue(!IsInstanceValid(e1), "激光: 持续伤害击杀首个目标");
+            AssertTrue(ReferenceEquals(tower.BeamTarget, e2), "激光: 目标死亡后自动切换至下一个");
+
+            await Wait(1.5f);
+            AssertTrue(!IsInstanceValid(e2), "激光: 切换后继续击杀下一目标");
+
+            Cleanup(tower);
+        }
+
+        /// <summary>
+        /// 检查塔下是否存在可见的光束 Line2D 子节点。
+        /// </summary>
+        /// <param name="tower">目标塔</param>
+        /// <returns>存在可见光束返回 true</returns>
+        private static bool HasBeamLine(Tower tower)
+        {
+            foreach (Node child in tower.GetChildren())
+            {
+                if (child is Line2D line && line.Visible)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 场景 8：出售。按 SellRefundRatio 返还金币并释放槽位。
         /// </summary>
         private async System.Threading.Tasks.Task TestSell()
         {

@@ -42,7 +42,11 @@ namespace TowerDefence.Config.Towers
 
         /// <summary>弹道攻击：发射飞行弹体，抵达目标（或落点）时才结算伤害/debuff；
         /// AOE 塔在弹体落点按 AoeRadius 溅射，与命中瞬间目标是否存活无关。</summary>
-        Projectile
+        Projectile,
+
+        /// <summary>光束攻击：锁定目标持续跟踪并按帧结算每秒伤害（Damage 即 DPS），
+        /// 目标死亡或离开范围后自动切换/断束，锁定期间常驻光束 Line2D 表现。</summary>
+        Beam
     }
 
     /// <summary>
@@ -117,6 +121,7 @@ namespace TowerDefence.Config.Towers
 
         /// <summary>
         /// 获取或设置防御塔每次攻击造成的基础伤害值。
+        /// Mode = Beam 时该值表示每秒伤害（DPS），按帧持续结算；其余模式为单次攻击伤害。
         /// 实际伤害结算需在逻辑层结合目标护甲、减伤 Buff 等因素计算。
         /// </summary>
         [Export] public float Damage { get; set; } = 10.0f;
@@ -144,5 +149,10 @@ namespace TowerDefence.Config.Towers
         /// 时长结束后目标恢复原速；再次命中会刷新持续时间。
         /// </summary>
         [Export] public float SlowDuration { get; set; } = 2.0f;
+
+        /// <summary>
+        /// 获取或设置光束攻击（Mode = Beam）的 Line2D 表现宽度（像素）。
+        /// </summary>
+        [Export] public float BeamWidth { get; set; } = 4.0f;
     }
 }

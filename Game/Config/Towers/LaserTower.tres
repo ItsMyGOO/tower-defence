@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="TowerData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Game/Config/Towers/TowerData.cs" id="1_towerdata"]
+
+[resource]
+script = ExtResource("1_towerdata")
+TowerId = "laser_tower"
+TowerName = "激光塔"
+Kind = 0
+Targeting = 0
+Mode = 2
+BuildCost = 120
+AttackRange = 180.0
+Damage = 18.0
+AttackInterval = 0.5
+BeamWidth = 5.0
+AttackColor = Color(1, 0.25, 0.35, 1)

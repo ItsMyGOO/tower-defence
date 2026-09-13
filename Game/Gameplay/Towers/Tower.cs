@@ -28,6 +28,21 @@ namespace TowerDefence.Gameplay.Towers
         private readonly List<Enemy> _targetsInRange = new();
 
         /// <summary>
+        /// 光束攻击（Mode = Beam）常驻 Line2D 表现节点；无锁定目标时隐藏。
+        /// </summary>
+        private Line2D _beamLine;
+
+        /// <summary>
+        /// 光束攻击当前锁定的目标；死亡或离开范围后自动重新选择。
+        /// </summary>
+        private Enemy _beamTarget;
+
+        /// <summary>
+        /// 获取光束攻击当前锁定的目标（未锁定为 null），供测试与调试读取。
+        /// </summary>
+        public Enemy BeamTarget => _beamTarget;
+
+        /// <summary>
         /// 节点被添加到场景树时调用。
         /// 校验 Data 配置并动态创建所有子组件（Sprite2D、Timer、Area2D），
         /// 完成信号绑定后启动攻击循环。
@@ -46,6 +61,63 @@ namespace TowerDefence.Gameplay.Towers
             SetupDetectionArea();
 
             GD.Print($"[Tower] 初始化完成: {Data.TowerName} | 范围={Data.AttackRange} | 伤害={Data.Damage} | 间隔={Data.AttackInterval}s");
+        }
+
+        /// <summary>
+        /// 每帧更新逻辑，仅光束模式（Mode = Beam）生效：
+        /// 锁定目标持续按帧结算每秒伤害（Damage 即 DPS），光束 Line2D 每帧跟踪目标位置；
+        /// 目标死亡或离开攻击范围后自动重新选择，无可用目标时断束隐藏。
+        /// </summary>
+        /// <param name="delta">距上一帧经过的时间（秒）</param>
+        public override void _Process(double delta)
+        {
+            if (Data == null || Data.Mode != AttackMode.Beam)
+            {
+                return;
+            }
+
+            PruneInvalidTargets();
+
+            float rangeSq = Data.AttackRange * Data.AttackRange;
+            if (_beamTarget == null || !IsInstanceValid(_beamTarget)
+                || GlobalPosition.DistanceSquaredTo(_beamTarget.GlobalPosition) > rangeSq)
+            {
+                _beamTarget = SelectTarget();
+            }
+
+            if (_beamTarget == null)
+            {
+                if (_beamLine != null)
+                {
+                    _beamLine.Visible = false;
+                }
+                return;
+            }
+
+            _beamTarget.TakeDamage(Data.Damage * (float)delta);
+
+            EnsureBeamLine();
+            _beamLine.Points = new[] { Vector2.Zero, _beamTarget.GlobalPosition - GlobalPosition };
+            _beamLine.Visible = true;
+        }
+
+        /// <summary>
+        /// 确保光束 Line2D 子节点存在（懒创建），宽度与颜色取自 TowerData 配置。
+        /// </summary>
+        private void EnsureBeamLine()
+        {
+            if (_beamLine != null)
+            {
+                return;
+            }
+
+            _beamLine = new Line2D
+            {
+                Name = "BeamLine",
+                Width = Data.BeamWidth,
+                DefaultColor = new Color(Data.AttackColor, 0.85f)
+            };
+            AddChild(_beamLine);
         }
 
         /// <summary>
@@ -75,8 +147,8 @@ namespace TowerDefence.Gameplay.Towers
 
         /// <summary>
         /// 创建并配置攻击间隔定时器。
-        /// WaitTime 取自 Data.AttackInterval，循环触发并自动启动，
-        /// Timeout 时执行一次索敌攻击判定。
+        /// WaitTime 取自 Data.AttackInterval，循环触发并自动启动，Timeout 时执行一次索敌攻击判定。
+        /// 光束模式（Beam）不走攻击计时器，伤害在 _Process 中按帧持续结算，故不自动启动。
         /// </summary>
         private void SetupAttackTimer()
         {
@@ -85,7 +157,7 @@ namespace TowerDefence.Gameplay.Towers
                 Name = "AttackTimer",
                 WaitTime = Data.AttackInterval,
                 OneShot = false,
-                Autostart = true
+                Autostart = Data.Mode != AttackMode.Beam
             };
             _attackTimer.Timeout += TryAttackTarget;
             AddChild(_attackTimer);

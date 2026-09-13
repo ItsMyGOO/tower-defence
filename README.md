@@ -18,7 +18,7 @@
 ### 1. 核心玩法切片 (Core Gameplay)
 * **地图与路径**：基于 `Path2D` / `PathFollow2D` 构建静态刷怪路径（关卡差异走 Level.cs 的 Export 配置）。 ✅
 * **防御塔机制**：单体/AOE/减速三种攻击形态（`TowerKind`），目标选择策略（最前线/最近/血量最高，`TargetingMode`）、攻击冷却；右键出售按 `SellRefundRatio` 返还金币。 ✅
-* **攻击弹道**：按 `AttackMode` 分流——弹道塔发射追踪弹体（箭/炮/冰霜），抵达才结算（AOE 落点溅射、减速弹命中附加 debuff）；即时模式（tracer 拉线）为激光塔预留。激光塔（光束锁定、持续伤害）🚧 规划中。 ✅
+* **攻击弹道**：按 `AttackMode` 分流——弹道塔发射追踪弹体（箭/炮/冰霜），抵达才结算（AOE 落点溅射、减速弹命中附加 debuff）✅；激光塔光束锁定目标、按帧持续伤害（DPS）、自动切换目标 ✅。
 * **敌人机制**：不同类型（基础/高速/高血）的波次生成（Wave Spawner）与减速 debuff；飞行敌人 🚧 规划中。
 * **资源与经济**：建造消耗、击杀奖励、漏怪扣血、玩家生命值控制与胜负结算逻辑。 ✅
 
@@ -49,7 +49,7 @@ res://
 │   │   └── Managers/            # SceneManager / AudioManager / EffectsManager（AutoLoad，经 .tscn 包装）
 │   │                            # GameManager（关卡场景内，胜负状态机）
 │   ├── Config/                  # 数据驱动配置（.tres 实例 + 对应 Resource 类）
-│   │   ├── Towers/              # ArrowTower(单体) / CannonTower(AOE) / FrostTower(减速)
+│   │   ├── Towers/              # ArrowTower(箭弹) / CannonTower(溅射) / FrostTower(减速) / LaserTower(光束)
 │   │   ├── Enemies/             # BasicSlime / FastGoblin / TankOrc
 │   │   └── Waves/               # Wave_01..04 波次配置
 │   ├── Gameplay/                # 核心玩法层（按业务模块划分）

@@ -5,6 +5,7 @@
 [ext_resource type="Resource" path="res://Game/Config/Towers/ArrowTower.tres" id="3_arrow_tower"]
 [ext_resource type="Resource" path="res://Game/Config/Towers/CannonTower.tres" id="4_cannon_tower"]
 [ext_resource type="Resource" path="res://Game/Config/Towers/FrostTower.tres" id="5_frost_tower"]
+[ext_resource type="Resource" path="res://Game/Config/Towers/LaserTower.tres" id="6_laser_tower"]
 
 [node name="HUDView" type="CanvasLayer"]
 script = ExtResource("1_hud_script")
@@ -69,3 +70,9 @@ custom_minimum_size = Vector2(120, 60)
 text = "❄️冰霜塔(80)"
 script = ExtResource("2_buildbutton_script")
 Data = ExtResource("5_frost_tower")
+
+[node name="LaserTowerButton" type="Button" parent="BottomBar/BuildButtons"]
+custom_minimum_size = Vector2(120, 60)
+text = "🔴激光塔(120)"
+script = ExtResource("2_buildbutton_script")
+Data = ExtResource("6_laser_tower")
