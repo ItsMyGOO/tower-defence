@@ -42,6 +42,10 @@ namespace TowerDefence.Gameplay.Enemies
             CurrentHp = Data.MaxHp;
             Progress = 0.0f;
 
+            // PathFollow2D 的 Loop 默认为 true：不显式关闭时敌人走到路径终点会绕回起点循环移动，
+            // ProgressRatio 永远到不了 1.0，漏怪扣血与波次完成判定全部失效。
+            Loop = false;
+
             SetupHitArea();
         }
 
