@@ -28,19 +28,6 @@ namespace TowerDefence.Core.AutoLoads
         #region 防御塔
 
         /// <summary>
-        /// 当防御塔被成功放置到地图上时触发。
-        /// </summary>
-        /// <param name="gridPosition">防御塔所在的网格坐标</param>
-        /// <param name="towerId">防御塔的资源标识符或配置 ID</param>
-        public static event Action<Vector2I, string> OnTowerPlaced;
-
-        /// <summary>
-        /// 当防御塔被出售（移除）时触发。
-        /// </summary>
-        /// <param name="gridPosition">被出售防御塔所在的网格坐标</param>
-        public static event Action<Vector2I> OnTowerSold;
-
-        /// <summary>
         /// 当防御塔建造成功时触发。
         /// </summary>
         /// <param name="towerData">建造的塔数据资源</param>
@@ -102,19 +89,6 @@ namespace TowerDefence.Core.AutoLoads
         /// </summary>
         /// <param name="newHp">更新后的生命值</param>
         public static void RaisePlayerHpChanged(int newHp) => OnPlayerHpChanged?.Invoke(newHp);
-
-        /// <summary>
-        /// 发布防御塔放置事件。
-        /// </summary>
-        /// <param name="gridPosition">防御塔所在的网格坐标</param>
-        /// <param name="towerId">防御塔的资源标识符或配置 ID</param>
-        public static void RaiseTowerPlaced(Vector2I gridPosition, string towerId) => OnTowerPlaced?.Invoke(gridPosition, towerId);
-
-        /// <summary>
-        /// 发布防御塔出售事件。
-        /// </summary>
-        /// <param name="gridPosition">被出售防御塔所在的网格坐标</param>
-        public static void RaiseTowerSold(Vector2I gridPosition) => OnTowerSold?.Invoke(gridPosition);
 
         /// <summary>
         /// 发布防御塔建造成功事件。
