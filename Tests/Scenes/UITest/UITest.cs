@@ -13,8 +13,7 @@ namespace TowerDefence.Tests.Scenes
     /// 动态创建 HUDView、EconomyManager、TowerManager 与测试按钮，
     /// 通过按钮手动触发金币/血量增减与波次开始事件，验证：
     /// 1) HUD Label 能实时刷新金币、血量、波次；
-    /// 2) 金币不足时 TowerBuildButton 自动禁用（变灰），增加金币后重新激活；
-    /// 3) 点击建造按钮时 TowerManager.CurrentSelectedTowerData 被正确设置。
+    /// 2) 金币/血量/波次事件驱动 HUD 实时刷新。
     /// </summary>
     public partial class UITest : Node2D
     {
@@ -44,15 +43,13 @@ namespace TowerDefence.Tests.Scenes
         private EconomyManager _economyManager;
         private TowerManager _towerManager;
         private HUDView _hudView;
-        private TowerBuildButton _towerBuildButton;
-
-        #endregion
+            #endregion
 
         #region 生命周期
 
         /// <summary>
         /// 节点进入场景树时调用。
-        /// 依次创建 EconomyManager、TowerManager、HUDView（含内部 Label 与 TowerBuildButton）
+        /// 依次创建 EconomyManager、TowerManager、HUDView
         /// 以及测试用控制按钮，并订阅事件用于日志打印。
         /// </summary>
         public override void _Ready()
@@ -110,7 +107,7 @@ namespace TowerDefence.Tests.Scenes
         }
 
         /// <summary>
-        /// 创建 HUDView 主界面及其内部 Label 与 TowerBuildButton。
+        /// 创建 HUDView 主界面及其内部 Label。
         /// 由于测试场景采用代码动态创建，避免依赖编辑器手工绑定节点。
         /// </summary>
         private void CreateHUDView()
@@ -147,29 +144,9 @@ namespace TowerDefence.Tests.Scenes
             topBar.AddChild(new Control { CustomMinimumSize = new Vector2(30, 0) });
             topBar.AddChild(waveLabel);
 
-            var buildButtonsContainer = new HBoxContainer
-            {
-                Name = "BuildButtonsContainer",
-                OffsetTop = 60,
-                OffsetLeft = 10
-            };
-            _hudView.AddChild(buildButtonsContainer);
-
-            _towerBuildButton = new TowerBuildButton
-            {
-                Name = "TowerBuildButton",
-                Text = TestTowerData != null
-                    ? $"建造 {TestTowerData.TowerName} ({TestTowerData.BuildCost}G)"
-                    : "建造 (未绑定塔数据)",
-                CustomMinimumSize = new Vector2(200, 40),
-                Data = TestTowerData
-            };
-            buildButtonsContainer.AddChild(_towerBuildButton);
-
             _hudView.GoldLabel = goldLabel;
             _hudView.HpLabel = hpLabel;
             _hudView.WaveLabel = waveLabel;
-            _hudView.BuildButtonsContainer = buildButtonsContainer;
         }
 
         /// <summary>
@@ -214,7 +191,7 @@ namespace TowerDefence.Tests.Scenes
 
             var hint = new Label
             {
-                Text = "\n提示：点击建造按钮后查看 TowerManager.CurrentSelectedTowerData",
+                Text = "\n提示：点击地图槽位弹出环形菜单建造/升级/出售防御塔",
                 AutowrapMode = TextServer.AutowrapMode.Word,
                 CustomMinimumSize = new Vector2(350, 0)
             };
@@ -279,16 +256,13 @@ namespace TowerDefence.Tests.Scenes
             GD.Print($"[UITest] GoldLabel: {(_hudView?.GoldLabel != null ? "OK" : "MISSING")}");
             GD.Print($"[UITest] HpLabel: {(_hudView?.HpLabel != null ? "OK" : "MISSING")}");
             GD.Print($"[UITest] WaveLabel: {(_hudView?.WaveLabel != null ? "OK" : "MISSING")}");
-            GD.Print($"[UITest] BuildButtonsContainer: {(_hudView?.BuildButtonsContainer != null ? "OK" : "MISSING")}");
-            GD.Print($"[UITest] TowerBuildButton: {(_towerBuildButton != null ? "OK" : "MISSING")}");
             GD.Print($"[UITest] 初始金币: {_economyManager?.CurrentGold} (塔成本: {TestTowerData?.BuildCost})");
-            GD.Print($"[UITest] 初始建造按钮 Disabled: {_towerBuildButton?.Disabled} (金币不足应为 True)");
             GD.Print("[UITest] 请使用界面右侧的测试按钮进行手动验证。");
         }
 
         private void TestHandleGoldChanged(int newGold)
         {
-            GD.Print($"[UITest] 💰 OnGoldChanged -> {newGold} | 按钮Disabled={_towerBuildButton?.Disabled}");
+            GD.Print($"[UITest] 💰 OnGoldChanged -> {newGold}");
         }
 
         private void TestHandleHpChanged(int newHp)

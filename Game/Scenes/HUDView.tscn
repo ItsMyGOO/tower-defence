@@ -1,11 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://hud_view_scene"]
+[gd_scene load_steps=2 format=3 uid="uid://hud_view_scene"]
 
 [ext_resource type="Script" path="res://Game/UI/HUD/HUDView.cs" id="1_hud_script"]
-[ext_resource type="Script" path="res://Game/UI/HUD/TowerBuildButton.cs" id="2_buildbutton_script"]
-[ext_resource type="Resource" path="res://Game/Config/Towers/ArrowTower.tres" id="3_arrow_tower"]
-[ext_resource type="Resource" path="res://Game/Config/Towers/CannonTower.tres" id="4_cannon_tower"]
-[ext_resource type="Resource" path="res://Game/Config/Towers/FrostTower.tres" id="5_frost_tower"]
-[ext_resource type="Resource" path="res://Game/Config/Towers/LaserTower.tres" id="6_laser_tower"]
 
 [node name="HUDView" type="CanvasLayer"]
 script = ExtResource("1_hud_script")
@@ -13,7 +8,6 @@ GoldLabel = NodePath("TopBar/GoldLabel")
 HpLabel = NodePath("TopBar/HpLabel")
 WaveLabel = NodePath("TopBar/WaveLabel")
 PauseButton = NodePath("TopBar/PauseButton")
-BuildButtonsContainer = NodePath("BottomBar/BuildButtons")
 
 [node name="TopBar" type="HBoxContainer" parent="."]
 offset_left = 20.0
@@ -43,36 +37,3 @@ size_flags_horizontal = 3
 [node name="PauseButton" type="Button" parent="TopBar"]
 custom_minimum_size = Vector2(120, 40)
 text = "⏸️ 暂停"
-
-[node name="BottomBar" type="HBoxContainer" parent="."]
-offset_left = 20.0
-offset_top = 600.0
-offset_right = 800.0
-offset_bottom = 680.0
-
-[node name="BuildButtons" type="HBoxContainer" parent="BottomBar"]
-size_flags_horizontal = 3
-
-[node name="ArrowTowerButton" type="Button" parent="BottomBar/BuildButtons"]
-custom_minimum_size = Vector2(120, 60)
-text = "箭塔(50)"
-script = ExtResource("2_buildbutton_script")
-Data = ExtResource("3_arrow_tower")
-
-[node name="CannonTowerButton" type="Button" parent="BottomBar/BuildButtons"]
-custom_minimum_size = Vector2(120, 60)
-text = "炮塔(100)"
-script = ExtResource("2_buildbutton_script")
-Data = ExtResource("4_cannon_tower")
-
-[node name="FrostTowerButton" type="Button" parent="BottomBar/BuildButtons"]
-custom_minimum_size = Vector2(120, 60)
-text = "❄️冰霜塔(80)"
-script = ExtResource("2_buildbutton_script")
-Data = ExtResource("5_frost_tower")
-
-[node name="LaserTowerButton" type="Button" parent="BottomBar/BuildButtons"]
-custom_minimum_size = Vector2(120, 60)
-text = "🔴激光塔(120)"
-script = ExtResource("2_buildbutton_script")
-Data = ExtResource("6_laser_tower")

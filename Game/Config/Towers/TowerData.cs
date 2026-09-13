@@ -154,5 +154,30 @@ namespace TowerDefence.Config.Towers
         /// 获取或设置光束攻击（Mode = Beam）的 Line2D 表现宽度（像素）。
         /// </summary>
         [Export] public float BeamWidth { get; set; } = 4.0f;
+
+        /// <summary>
+        /// 获取或设置该塔的最高等级（1 表示不可升级）。
+        /// </summary>
+        [Export] public int MaxLevel { get; set; } = 1;
+
+        /// <summary>
+        /// 获取或设置 1 级升 2 级的基础费用；后续等级费用按 UpgradeCostFactor 逐级上浮。
+        /// </summary>
+        [Export] public float UpgradeBaseCost { get; set; } = 50.0f;
+
+        /// <summary>
+        /// 获取或设置升级费用的逐级倍率（2→3 级费用 = 基础费用 × 倍率）。
+        /// </summary>
+        [Export] public float UpgradeCostFactor { get; set; } = 1.5f;
+
+        /// <summary>
+        /// 获取或设置每级伤害成长倍率（升级后伤害 = 当前伤害 × 该倍率）。
+        /// </summary>
+        [Export] public float DamageGrowthFactor { get; set; } = 1.3f;
+
+        /// <summary>
+        /// 获取或设置每级射程成长倍率（升级后射程 = 当前射程 × 该倍率）。
+        /// </summary>
+        [Export] public float RangeGrowthFactor { get; set; } = 1.08f;
     }
 }

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Godot;
 using TowerDefence.Config.Towers;
 using TowerDefence.Core.AutoLoads;
@@ -9,16 +11,27 @@ namespace TowerDefence.Gameplay.Towers
     /// 防御塔建造管理器节点。
     /// 作为建造事务的统一入口，负责校验槽位状态、扣除金币、实例化塔预制体并挂载到槽位，
     /// 事务成功后通过 EventBus 广播 OnTowerBuilt 事件供 UI/音效等模块响应。
-    /// 建议作为主场景常驻节点，配合 HUD 商店与 TowerSlot 槽位完成端到端建造流程。
+    /// 同时持有唯一的槽位环形菜单：玩家点击槽位即弹出——空槽位为建造环（可用塔按
+    /// Config/Towers 目录扫描自动发现），已占用槽位为升级/出售环。
     /// </summary>
     public partial class TowerManager : Node
     {
         /// <summary>
         /// 获取 TowerManager 的全局单例实例。
-        /// 用于 UI 层（HUD 商店按钮）与建造槽位等模块快速访问建造管理器，
+        /// 用于 UI 层与建造槽位等模块快速访问建造管理器，
         /// 需确保场景中仅存在一个 TowerManager 实例，否则可能导致引用非预期节点。
         /// </summary>
         public static TowerManager Instance { get; private set; }
+
+        /// <summary>
+        /// 可用塔配置所在目录（按目录扫描自动发现，新增塔 .tres 无需改代码）。
+        /// </summary>
+        private const string TowerConfigDir = "res://Game/Config/Towers";
+
+        /// <summary>
+        /// 塔配置文件名匹配规则，兼容导出包内重映射的 .tres.remap。
+        /// </summary>
+        private static readonly Regex TowerConfigRegex = new(@"^[\w\-]+\.tres(\.remap)?$", RegexOptions.Compiled);
 
         #region 导出配置
 
@@ -33,17 +46,31 @@ namespace TowerDefence.Gameplay.Towers
         #region 运行时状态
 
         /// <summary>
-        /// 获取或设置当前玩家在 UI 中选中的待建造塔数据。
-        /// 为 null 表示当前未选择任何塔；HUD 商店点击后应更新此字段，
-        /// 随后在玩家点击 TowerSlot 时将此值传入 TryBuildTower。
-        /// 右键点击槽位以外区域时自动清空（取消选择）。
+        /// 槽位环形菜单唯一实例。
         /// </summary>
-        public TowerData CurrentSelectedTowerData { get; set; }
+        private TowerRadialMenu _radialMenu;
 
         /// <summary>
-        /// 建造预览指示器（射程圈/幽灵/吸附高亮），随选中状态自动显隐。
+        /// 获取槽位环形菜单实例（供测试与调试读取菜单状态）。
         /// </summary>
-        private BuildPreview _buildPreview;
+        public TowerRadialMenu RadialMenu => _radialMenu;
+
+        /// <summary>
+        /// 扫描 Config/Towers 目录所得的可用塔配置缓存。
+        /// </summary>
+        private List<TowerData> _availableTowers;
+
+        /// <summary>
+        /// 获取扫描到的可用塔配置列表（惰性扫描，失败时为空列表）。
+        /// </summary>
+        public IReadOnlyList<TowerData> AvailableTowers
+        {
+            get
+            {
+                _availableTowers ??= DiscoverTowers();
+                return _availableTowers;
+            }
+        }
 
         #endregion
 
@@ -51,14 +78,14 @@ namespace TowerDefence.Gameplay.Towers
 
         /// <summary>
         /// 节点被添加到场景树时调用。
-        /// 初始化单例引用并创建建造预览指示器子节点。
+        /// 初始化单例引用并创建槽位环形菜单子节点。
         /// </summary>
         public override void _Ready()
         {
             Instance = this;
 
-            _buildPreview = new BuildPreview { Name = "BuildPreview" };
-            AddChild(_buildPreview);
+            _radialMenu = new TowerRadialMenu { Name = "TowerRadialMenu" };
+            AddChild(_radialMenu);
         }
 
         /// <summary>
@@ -73,33 +100,85 @@ namespace TowerDefence.Gameplay.Towers
             }
         }
 
-        /// <summary>
-        /// 全局输入回调：右键点击槽位以外区域时取消当前选中的待建造塔类型。
-        /// 右键落在槽位上时不介入（由 TowerSlot 处理出售）；
-        /// 使用 _Input 而非 _UnhandledInput，避免占位 Control 吞事件导致收不到。
-        /// </summary>
-        /// <param name="event">输入事件</param>
-        public override void _Input(InputEvent @event)
-        {
-            if (@event is not InputEventMouseButton mouseBtn || !mouseBtn.Pressed) return;
-            if (mouseBtn.ButtonIndex != MouseButton.Right) return;
-            if (CurrentSelectedTowerData == null) return;
+        #endregion
 
-            foreach (Node node in GetTree().GetNodesInGroup(TowerSlot.SlotGroup))
+        #region 槽位菜单管理
+
+        /// <summary>
+        /// 在指定槽位打开环形菜单：空槽位弹建造环，已占用槽位弹升级/出售环。
+        /// 由 TowerSlot 左键点击触发。
+        /// </summary>
+        /// <param name="slot">被点击的槽位</param>
+        public void OpenSlotMenu(TowerSlot slot)
+        {
+            if (slot == null)
             {
-                if (node is TowerSlot slot && IsInstanceValid(slot) && slot.ContainsViewportPosition(mouseBtn.Position))
+                GD.PrintErr("[TowerManager] OpenSlotMenu 失败：slot 为 null。");
+                return;
+            }
+
+            if (slot.IsOccupied)
+            {
+                _radialMenu.OpenUpgrade(slot);
+            }
+            else
+            {
+                _radialMenu.OpenBuild(slot, AvailableTowers);
+            }
+        }
+
+        /// <summary>
+        /// 扫描塔配置目录，加载所有 TowerData 资源并按文件名排序。
+        /// </summary>
+        /// <returns>可用塔配置列表</returns>
+        private static List<TowerData> DiscoverTowers()
+        {
+            var towers = new List<TowerData>();
+            var fileNames = new List<string>();
+
+            using var dir = DirAccess.Open(TowerConfigDir);
+            if (dir == null)
+            {
+                GD.PrintErr($"[TowerManager] 无法打开塔配置目录 {TowerConfigDir}（错误: {DirAccess.GetOpenError()}）。");
+                return towers;
+            }
+
+            dir.ListDirBegin();
+            string fileName = dir.GetNext();
+            while (!string.IsNullOrEmpty(fileName))
+            {
+                if (!dir.CurrentIsDir() && TowerConfigRegex.IsMatch(fileName))
                 {
-                    return;
+                    fileNames.Add(fileName);
+                }
+
+                fileName = dir.GetNext();
+            }
+            dir.ListDirEnd();
+
+            fileNames.Sort();
+
+            foreach (string fileName2 in fileNames)
+            {
+                string path = $"{TowerConfigDir}/{fileName2}";
+                var data = ResourceLoader.Load<TowerData>(path);
+                if (data != null)
+                {
+                    towers.Add(data);
+                }
+                else
+                {
+                    GD.PrintErr($"[TowerManager] 塔配置加载失败或类型不符: {path}");
                 }
             }
 
-            GD.Print($"[TowerManager] 玩家右键空白处，取消选择待建造塔：{CurrentSelectedTowerData.TowerName}");
-            CurrentSelectedTowerData = null;
+            GD.Print($"[TowerManager] ✅ 从 {TowerConfigDir} 扫描到 {towers.Count} 种可用塔。");
+            return towers;
         }
 
         #endregion
 
-        #region 公共接口
+        #region 公共接口 —— 建造事务
 
         /// <summary>
         /// 尝试在指定槽位上建造防御塔。
@@ -163,7 +242,6 @@ namespace TowerDefence.Gameplay.Towers
                 return false;
             }
 
-            CurrentSelectedTowerData = null;
             EventBus.RaiseTowerBuilt(towerData, slot.GlobalPosition);
 
             GD.Print($"[TowerManager] ✅ 建造成功！塔={towerData.TowerName} | 槽位={slot.Name} | 位置={slot.GlobalPosition} | 剩余金币={EconomyManager.Instance.CurrentGold}");

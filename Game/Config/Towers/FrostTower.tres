@@ -18,3 +18,5 @@ SlowFactor = 0.5
 SlowDuration = 2.0
 ProjectileSpeed = 350.0
 AttackColor = Color(0.4, 0.8, 1, 1)
+MaxLevel = 2
+UpgradeBaseCost = 60.0

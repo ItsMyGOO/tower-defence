@@ -7,8 +7,8 @@ namespace TowerDefence.UI.HUD
 {
     /// <summary>
     /// 局内 HUD 主界面。
-    /// 负责展示玩家当前金币、剩余生命值与当前波次等核心状态信息，
-    /// 并作为建塔按钮容器的挂载根节点。HUDView 新增暂停交互：
+    /// 负责展示玩家当前金币、剩余生命值与当前波次等核心状态信息。
+    /// 建造交互已迁移至槽位环形菜单（点击槽位弹出），HUD 不再承载建造栏。HUDView 新增暂停交互：
     /// 右上角 PauseButton 或玩家按 ESC 键 → 切换 PauseMenuPanel 暂停遮罩，
     /// 暂停面板提供「返回主菜单」作为关卡中途 → 主界面的闭环出口。
     /// 所有 UI 数据刷新完全通过 EventBus 订阅 OnGoldChanged / OnPlayerHpChanged / OnWaveStarted 事件驱动，
@@ -35,13 +35,6 @@ namespace TowerDefence.UI.HUD
         /// Inspector 中绑定到场景树内对应的 Label 节点，用于显示当前进行中的波次索引。
         /// </summary>
         [Export] public Label WaveLabel { get; set; }
-
-        /// <summary>
-        /// 获取或设置建塔按钮容器节点引用。
-        /// Inspector 中绑定到场景树内的 Control/Container 节点（如 HBoxContainer），
-        /// 用于在 Inspector 或运行时组织多个 TowerBuildButton 子节点。
-        /// </summary>
-        [Export] public Control BuildButtonsContainer { get; set; }
 
         /// <summary>
         /// 获取或设置 HUD 右上角的暂停按钮节点引用。
@@ -72,7 +65,7 @@ namespace TowerDefence.UI.HUD
 
         /// <summary>
         /// 节点被添加到场景树时调用。
-        /// 依次执行：Label/容器/暂停按钮 + 暂停菜单引用兜底解析 → 绑定 PauseButton 点击回调 →
+        /// 依次执行：Label/暂停按钮 + 暂停菜单引用兜底解析 → 绑定 PauseButton 点击回调 →
         /// 实例化 PauseMenuPanel（如未预挂载）→ 订阅 EventBus → 读取真实初始值刷新 UI。
         /// 初始值刷新优先从 EconomyManager.Instance 直接读取（避免事件竞态导致初始显示为 0），
         /// 兜底则显示预设安全默认值（金币0 / 血量0 / 波次1）。
@@ -149,18 +142,15 @@ namespace TowerDefence.UI.HUD
             HpLabel ??= GetNodeOrNull<Label>("TopBar/HpLabel");
             WaveLabel ??= GetNodeOrNull<Label>("TopBar/WaveLabel");
             PauseButton ??= GetNodeOrNull<Button>("TopBar/PauseButton");
-            BuildButtonsContainer ??= GetNodeOrNull<Control>("BottomBar/BuildButtons");
-
             int missing = 0;
             if (GoldLabel == null) { GD.PrintErr("[HUDView] 兜底解析失败: GoldLabel"); missing++; }
             if (HpLabel == null) { GD.PrintErr("[HUDView] 兜底解析失败: HpLabel"); missing++; }
             if (WaveLabel == null) { GD.PrintErr("[HUDView] 兜底解析失败: WaveLabel"); missing++; }
             if (PauseButton == null) { GD.PrintErr("[HUDView] 兜底解析失败: PauseButton"); missing++; }
-            if (BuildButtonsContainer == null) { GD.PrintErr("[HUDView] 兜底解析失败: BuildButtonsContainer"); missing++; }
 
             if (missing == 0)
             {
-                GD.Print("[HUDView] ✅ 5 个 UI 节点引用兜底解析全部成功。");
+                GD.Print("[HUDView] ✅ 4 个 UI 节点引用兜底解析全部成功。");
             }
         }
 

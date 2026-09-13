@@ -28,6 +28,21 @@ namespace TowerDefence.Gameplay.Towers
         private readonly List<Enemy> _targetsInRange = new();
 
         /// <summary>
+        /// 获取当前塔的等级（从 1 开始）。
+        /// </summary>
+        public int CurrentLevel { get; private set; } = 1;
+
+        /// <summary>
+        /// 获取建造与升级在该塔上的累计投入（金币），出售返还按该值与 SellRefundRatio 计算。
+        /// </summary>
+        public int InvestedGold { get; private set; }
+
+        /// <summary>
+        /// 获取一个值，指示塔是否已达到最高等级。
+        /// </summary>
+        public bool IsMaxLevel => Data == null || CurrentLevel >= Data.MaxLevel;
+
+        /// <summary>
         /// 光束攻击（Mode = Beam）常驻 Line2D 表现节点；无锁定目标时隐藏。
         /// </summary>
         private Line2D _beamLine;
@@ -56,11 +71,73 @@ namespace TowerDefence.Gameplay.Towers
                 return;
             }
 
+            // 每座塔持有 TowerData 的独立浅副本：升级直接改写副本数值（伤害/射程），
+            // 不会影响同型其他塔与共享的 .tres 配置；弹体等下游模块读取塔的 Data 即拿到当前等级数值。
+            Data = (TowerData)Data.Duplicate();
+            InvestedGold = Data.BuildCost;
+
             SetupSprite();
             SetupAttackTimer();
             SetupDetectionArea();
 
             GD.Print($"[Tower] 初始化完成: {Data.TowerName} | 范围={Data.AttackRange} | 伤害={Data.Damage} | 间隔={Data.AttackInterval}s");
+        }
+
+        /// <summary>
+        /// 获取下一级升级费用（按 UpgradeBaseCost 与 UpgradeCostFactor 逐级上浮，四舍五入）。
+        /// 已满级时调用无意义，返回 -1。
+        /// </summary>
+        /// <returns>下一级升级费用；已满级返回 -1</returns>
+        public int GetNextUpgradeCost()
+        {
+            if (Data == null || IsMaxLevel)
+            {
+                return -1;
+            }
+
+            return (int)Mathf.Round(Data.UpgradeBaseCost * Mathf.Pow(Data.UpgradeCostFactor, CurrentLevel - 1));
+        }
+
+        /// <summary>
+        /// 执行升级事务：扣费 → 等级 +1 → 在塔独立的数据副本上成长伤害与射程 → 累计投入。
+        /// 任意校验失败（配置缺失、已满级、金币不足、经济系统缺失）返回 false 且不产生任何变更。
+        /// </summary>
+        /// <returns>true 表示升级成功</returns>
+        public bool ApplyUpgrade()
+        {
+            if (Data == null)
+            {
+                GD.PrintErr("[Tower] 升级失败：TowerData 未配置。");
+                return false;
+            }
+
+            if (IsMaxLevel)
+            {
+                GD.Print($"[Tower] {Data.TowerName} 已满级（{Data.MaxLevel} 级），无法继续升级。");
+                return false;
+            }
+
+            var economy = Gameplay.Economy.EconomyManager.Instance;
+            if (economy == null)
+            {
+                GD.PrintErr("[Tower] 升级失败：EconomyManager 单例不存在。");
+                return false;
+            }
+
+            int cost = GetNextUpgradeCost();
+            if (!economy.TrySpendGold(cost))
+            {
+                GD.Print($"[Tower] 升级失败：金币不足。需要 {cost}，当前 {economy.CurrentGold}。");
+                return false;
+            }
+
+            CurrentLevel++;
+            InvestedGold += cost;
+            Data.Damage *= Data.DamageGrowthFactor;
+            Data.AttackRange *= Data.RangeGrowthFactor;
+
+            GD.Print($"[Tower] ✅ {Data.TowerName} 升级至 {CurrentLevel} 级 | 花费 {cost} | 伤害={Data.Damage:F1} | 射程={Data.AttackRange:F0}");
+            return true;
         }
 
         /// <summary>

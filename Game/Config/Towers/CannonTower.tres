@@ -16,3 +16,5 @@ AttackInterval = 1.5
 AoeRadius = 80.0
 ProjectileSpeed = 300.0
 AttackColor = Color(1, 0.45, 0.1, 1)
+MaxLevel = 2
+UpgradeBaseCost = 80.0

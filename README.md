@@ -17,7 +17,9 @@
 
 ### 1. 核心玩法切片 (Core Gameplay)
 * **地图与路径**：基于 `Path2D` / `PathFollow2D` 构建静态刷怪路径（关卡差异走 Level.cs 的 Export 配置）。 ✅
-* **防御塔机制**：单体/AOE/减速三种攻击形态（`TowerKind`），目标选择策略（最前线/最近/血量最高，`TargetingMode`）、攻击冷却；右键出售按 `SellRefundRatio` 返还金币。 ✅
+* **防御塔机制**：单体/AOE/减速三种攻击形态（`TowerKind`），目标选择策略（最前线/最近/血量最高，`TargetingMode`）、攻击冷却。 ✅
+* **槽位环形菜单**：点击空槽位弹出建造环（可用塔按 Config/Towers 目录扫描自动发现、金币不足置灰、悬停显示射程预览），点击已建塔弹出升级/出售环；右键快速出售。 ✅
+* **塔升级**：塔持有独立数据副本，升级成长伤害/射程，费用逐级上浮；出售按累计投入（建造+升级）比例返还。 ✅
 * **攻击弹道**：按 `AttackMode` 分流——弹道塔发射追踪弹体（箭/炮/冰霜），抵达才结算（AOE 落点溅射、减速弹命中附加 debuff）✅；激光塔光束锁定目标、按帧持续伤害（DPS）、自动切换目标 ✅。
 * **敌人机制**：不同类型（基础/高速/高血）的波次生成（Wave Spawner）与减速 debuff；飞行敌人 🚧 规划中。
 * **资源与经济**：建造消耗、击杀奖励、漏怪扣血、玩家生命值控制与胜负结算逻辑。 ✅
@@ -53,7 +55,7 @@ res://
 │   │   ├── Enemies/             # BasicSlime / FastGoblin / TankOrc
 │   │   └── Waves/               # Wave_01..04 波次配置
 │   ├── Gameplay/                # 核心玩法层（按业务模块划分）
-│   │   ├── Towers/              # Tower / Projectile / BuildPreview / TowerManager / TowerSlot（左键建造、右键出售）
+│   │   ├── Towers/              # Tower / Projectile / TowerRadialMenu / TowerManager / TowerSlot
 │   │   ├── Enemies/             # Enemy（PathFollow2D，减速 debuff）
 │   │   ├── Waves/               # WaveManager（波次调度与存活追踪）
 │   │   ├── Map/                 # Level 通用关卡控制器 + Level_01/02.tscn（差异全走 Export）
@@ -61,7 +63,7 @@ res://
 │   │   └── Effects/             # EnemyDeathEffect.tscn 击杀粒子特效
 │   ├── Scenes/                  # 共享实体场景 (EnemyBase / TowerBase / HUDView / 面板)
 │   └── UI/                      # UI 模块
-│       ├── HUD/                 # HUDView + TowerBuildButton（建造栏）
+│       ├── HUD/                 # HUDView（金币/血量/波次/暂停）
 │       ├── Panels/              # UIPanelBase 基类 / PauseMenuPanel / GameOverPanel
 │       ├── MainMenu/            # 主菜单
 │       └── LevelSelect/         # 选关界面（目录扫描动态生成关卡按钮）

@@ -15,8 +15,9 @@ namespace TowerDefence.Tests.Scenes
     /// 3) 目标策略：First 取最前线、Strongest 取血量最高者；
     /// 4) 槽位点击全链路：经视口输入管道的左键建造/右键出售；
     /// 5) 激光塔：光束锁定、持续伤害、自动切换目标；
-    /// 6) 建造预览：选中显隐、槽位吸附、右键取消选择；
-    /// 7) 出售：SellTower 按 SellRefundRatio 返还金币并释放槽位。
+    /// 6) 槽位环形菜单：点击槽位弹出建造环/升级环，选项点击完成建造与升级；
+    /// 7) 升级 API：等级成长、费用上浮、满级拒绝、按累计投入返还；
+    /// 8) 出售：SellTower 按 SellRefundRatio 对累计投入返还并释放槽位。
     /// 全部断言结果打印 ✅/❌ 与最终汇总，无头模式可直接运行。
     /// </summary>
     public partial class TowerBehaviorTest : Node2D
@@ -60,7 +61,7 @@ namespace TowerDefence.Tests.Scenes
                 await TestTracerVisual(enemyData);
                 await TestSlotClickPipeline();
                 await TestBeamLaser(enemyData);
-                await TestBuildPreview();
+                await TestTowerUpgrade();
                 await TestSell();
 
                 GD.Print($"[TowerBehaviorTest] ========== 测试结束：PASS {_passed} / FAIL {_failed} ==========");
@@ -333,58 +334,71 @@ namespace TowerDefence.Tests.Scenes
         }
 
         /// <summary>
-        /// 场景 6：槽位点击全链路（经视口 push_input 分发，与真实鼠标事件同一链路，
-        /// 回归「点击建造位置无反应」缺陷——占位 Control 吞事件导致物理拾取失效的问题）。
+        /// 场景 6：槽位点击全链路（经视口输入管道分发，与真实鼠标事件同一链路）。
+        /// 左键空槽位 → 建造环弹出（选项数 = 扫描到的可用塔数）→ 点击选项建造并扣费 →
+        /// 左键已占用槽位 → 升级环弹出 → 点击「⬆️ 升级」完成升级 → 右键槽位出售按投入返还。
         /// </summary>
         private async System.Threading.Tasks.Task TestSlotClickPipeline()
         {
             var towerManager = new TowerManager { Name = "TestTowerManager" };
             AddChild(towerManager);
-
-            var towerData = new TowerData
-            {
-                TowerId = "test_click",
-                TowerName = "测试点击塔",
-                BuildCost = 50,
-                SellRefundRatio = 0.5f
-            };
-            TowerManager.Instance.CurrentSelectedTowerData = towerData;
+            await Wait(0.1f);
 
             var slot = new TowerSlot { Name = "ClickTestSlot", Position = new Vector2(300, 300) };
             AddChild(slot);
             await Wait(0.1f);
 
             int goldBefore = _economy.CurrentGold;
+            Vector2 ClickWindowPos(Vector2 worldPos) => GetViewport().GetFinalTransform() * worldPos;
 
-            // 事件坐标是窗口坐标：引擎分发到 _Input 前会经 GetFinalTransform 的逆变换
-            // 转为视口坐标（无头窗口存在内容缩放，真机 1280x720 下为恒等），故此处需正向变换反推窗口坐标
-            Vector2 slotWindowPos = GetViewport().GetFinalTransform() * slot.GlobalPosition;
-
-            var press = new InputEventMouseButton
-            {
-                ButtonIndex = MouseButton.Left,
-                Pressed = true,
-                Position = slotWindowPos
-            };
-            Input.ParseInputEvent(press);
+            // --- 左键空槽位：建造环弹出 ---
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = ClickWindowPos(slot.GlobalPosition) });
             Input.FlushBufferedEvents();
             await Wait(0.2f);
 
-            AssertTrue(slot.IsOccupied, "点击: 左键点击槽位完成建造");
-            AssertTrue(_economy.CurrentGold == goldBefore - 50, "点击: 建造正确扣费");
+            var menu = TowerManager.Instance.RadialMenu;
+            AssertTrue(menu.IsOpen && !menu.IsUpgradeMenu, "菜单: 左键空槽位弹出建造环");
+            AssertTrue(menu.Options.Count == TowerManager.Instance.AvailableTowers.Count, "菜单: 建造环选项数与可用塔数一致");
 
-            var rightPress = new InputEventMouseButton
-            {
-                ButtonIndex = MouseButton.Right,
-                Pressed = true,
-                Position = slotWindowPos
-            };
-            Input.ParseInputEvent(rightPress);
+            // --- 点击第一个建造选项（目录序第一个 = ArrowTower，成本 50）---
+            // 按钮 Pressed 在按下+释放后触发，两个事件都发往选项按钮中心（环顶部）
+            Vector2 optionWindowPos = ClickWindowPos(slot.GlobalPosition + new Vector2(0, -78));
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = optionWindowPos });
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = optionWindowPos });
             Input.FlushBufferedEvents();
             await Wait(0.2f);
 
-            AssertTrue(!slot.IsOccupied, "点击: 右键点击槽位出售");
-            AssertTrue(_economy.CurrentGold == goldBefore - 50 + 25, "点击: 出售返还金币");
+            AssertTrue(slot.IsOccupied, "菜单: 点击建造选项完成建造");
+            AssertTrue(_economy.CurrentGold == goldBefore - 50, "菜单: 建造正确扣费");
+            AssertTrue(!menu.IsOpen, "菜单: 建造后菜单关闭");
+
+            // --- 左键已占用槽位：升级环弹出，点击「⬆️ 升级」（顶部选项，费用 40）---
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = ClickWindowPos(slot.GlobalPosition) });
+            Input.FlushBufferedEvents();
+            await Wait(0.2f);
+
+            AssertTrue(menu.IsOpen && menu.IsUpgradeMenu, "菜单: 左键已占用槽位弹升级环");
+            AssertTrue(menu.Options.Count == 2, "菜单: 升级环含升级/出售两个选项");
+
+            float baseDamage = slot.CurrentTower.Data.Damage;
+            Vector2 upgradeOptionPos = ClickWindowPos(slot.GlobalPosition + new Vector2(0, -78));
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = upgradeOptionPos });
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = upgradeOptionPos });
+            Input.FlushBufferedEvents();
+            await Wait(0.2f);
+
+            AssertTrue(slot.CurrentTower.CurrentLevel == 2, "升级: 点击升级选项后等级 +1");
+            AssertTrue(slot.CurrentTower.Data.Damage > baseDamage, "升级: 伤害按成长倍率提升");
+            AssertTrue(slot.CurrentTower.InvestedGold == 90, "升级: 累计投入 = 建造 50 + 升级 40");
+            AssertTrue(_economy.CurrentGold == goldBefore - 90, "升级: 升级扣费正确");
+
+            // --- 右键槽位出售：按累计投入 90 的 50% 返还 ---
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = true, Position = ClickWindowPos(slot.GlobalPosition) });
+            Input.FlushBufferedEvents();
+            await Wait(0.2f);
+
+            AssertTrue(!slot.IsOccupied, "出售: 右键点击槽位出售");
+            AssertTrue(_economy.CurrentGold == goldBefore - 90 + 45, "出售: 按累计投入比例返还");
 
             slot.QueueFree();
             await Wait(0.1f);
@@ -448,55 +462,45 @@ namespace TowerDefence.Tests.Scenes
         }
 
         /// <summary>
-        /// 场景 8：建造预览指示器。选中塔类型时预览可见并吸附空闲槽位；右键空白处取消选择。
+        /// 场景 8：升级 API。塔持有独立数据副本，升级成长伤害、费用上浮、
+        /// 满级拒绝再升、出售按累计投入比例返还。
         /// </summary>
-        private async System.Threading.Tasks.Task TestBuildPreview()
+        private async System.Threading.Tasks.Task TestTowerUpgrade()
         {
-            var towerManager = new TowerManager { Name = "TestPreviewTowerManager" };
-            AddChild(towerManager);
-            await Wait(0.1f);
-
-            BuildPreview preview = null;
-            foreach (Node child in towerManager.GetChildren())
-            {
-                if (child is BuildPreview found)
-                {
-                    preview = found;
-                    break;
-                }
-            }
-
-            AssertTrue(preview != null, "预览: TowerManager 自动创建预览指示器");
-
             var towerData = new TowerData
             {
-                TowerId = "test_preview",
-                TowerName = "测试预览塔",
+                TowerId = "test_upgrade",
+                TowerName = "测试升级塔",
                 BuildCost = 50,
-                AttackRange = 150f
+                SellRefundRatio = 0.5f,
+                MaxLevel = 2,
+                UpgradeBaseCost = 50f,
+                UpgradeCostFactor = 1.5f,
+                DamageGrowthFactor = 1.3f,
+                RangeGrowthFactor = 1.08f
             };
-            TowerManager.Instance.CurrentSelectedTowerData = towerData;
-            await Wait(0.2f);
-            AssertTrue(preview.Visible, "预览: 选中塔类型后预览可见");
 
-            var slot = new TowerSlot { Name = "PreviewTestSlot", Position = new Vector2(400, 300) };
+            var slot = new TowerSlot { Name = "UpgradeTestSlot" };
             AddChild(slot);
-            await Wait(0.1f);
 
-            // 鼠标移动到槽位上（窗口坐标按最终变换反推）
-            Vector2 slotWindowPos = GetViewport().GetFinalTransform() * slot.GlobalPosition;
-            Input.ParseInputEvent(new InputEventMouseMotion { Position = slotWindowPos });
-            Input.FlushBufferedEvents();
-            await Wait(0.2f);
-            AssertTrue(ReferenceEquals(preview.HoveredSlot, slot), "预览: 鼠标贴近空闲槽位时吸附");
+            int goldBefore = _economy.CurrentGold;
+            var tower = new Tower { Name = "UpgradeTestTower", Data = towerData };
+            AssertTrue(slot.PlaceTower(tower), "升级: PlaceTower 成功占用槽位");
+            AssertTrue(tower.InvestedGold == 50, "升级: 初始投入 = 建造费用");
+            AssertTrue(!ReferenceEquals(tower.Data, towerData), "升级: 塔持有独立数据副本");
 
-            // 右键空白处（远离槽位）取消选择
-            Vector2 awayWindowPos = GetViewport().GetFinalTransform() * new Vector2(100, 100);
-            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = true, Position = awayWindowPos });
-            Input.FlushBufferedEvents();
-            await Wait(0.2f);
-            AssertTrue(TowerManager.Instance.CurrentSelectedTowerData == null, "预览: 右键空白处取消选择");
-            AssertTrue(!preview.Visible, "预览: 取消选择后预览隐藏");
+            float baseDamage = tower.Data.Damage;
+            AssertTrue(tower.ApplyUpgrade(), "升级: 首次升级成功");
+            AssertTrue(tower.CurrentLevel == 2, "升级: 等级 +1");
+            AssertTrue(Mathf.IsEqualApprox(tower.Data.Damage, baseDamage * 1.3f), "升级: 伤害按 1.3x 成长");
+            AssertTrue(tower.InvestedGold == 100, "升级: 累计投入 = 50 + 50");
+            AssertTrue(_economy.CurrentGold == goldBefore - 50, "升级: 扣费正确");
+
+            AssertTrue(!tower.ApplyUpgrade(), "升级: 满级后拒绝再次升级");
+            AssertTrue(_economy.CurrentGold == goldBefore - 50, "升级: 满级升级不扣费");
+
+            slot.SellTower();
+            AssertTrue(_economy.CurrentGold == goldBefore, "升级: 出售返还累计投入的 50%");
 
             slot.QueueFree();
             await Wait(0.1f);

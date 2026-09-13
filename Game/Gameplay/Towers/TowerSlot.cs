@@ -7,8 +7,8 @@ namespace TowerDefence.Gameplay.Towers
     /// <summary>
     /// 防御塔建造槽位节点。
     /// 用于标记地图上可放置防御塔的位置，维护占用状态与当前已建造的塔引用；
-    /// 同时自持点击检测：左键点击槽位向 TowerManager 发起建造请求，
-    /// 右键点击已占用的槽位则出售塔位上的塔（按 TowerData.SellRefundRatio 返还金币）。
+    /// 左键点击槽位向 TowerManager 请求弹出环形菜单（空槽位 = 建造环 / 已占用 = 升级出售环），
+    /// 右键点击已占用的槽位直接出售塔位上的塔（按 TowerData.SellRefundRatio 对累计投入返还金币）。
     /// 点击采用 _Input + 画布坐标距离判定：地图上的占位 Control（如全屏 MapBackground）
     /// 会在 GUI 阶段吞掉鼠标事件，物理拾取与 _UnhandledInput 都收不到，
     /// 而 _Input 在 GUI 之前分发，是最可靠的入口。
@@ -62,12 +62,16 @@ namespace TowerDefence.Gameplay.Towers
 
             if (mouseBtn.ButtonIndex == MouseButton.Left)
             {
-                RequestBuild();
+                TowerManager.Instance?.OpenSlotMenu(this);
             }
             else
             {
                 SellTower();
             }
+
+            // 标记已消费：阻止本次点击继续流入 _UnhandledInput 阶段，
+            // 否则环形菜单的「点击外部关闭」逻辑会在菜单打开的同一事件里立刻将其关闭
+            GetViewport().SetInputAsHandled();
         }
 
         /// <summary>
@@ -84,38 +88,10 @@ namespace TowerDefence.Gameplay.Towers
         }
 
         /// <summary>
-        /// 建造请求入口：校验占用状态与 TowerManager 单例后，将当前选中的 TowerData
-        /// 交给 TowerManager.TryBuildTower 执行建造事务；未选塔时仅提示，不视为错误。
-        /// </summary>
-        private void RequestBuild()
-        {
-            if (IsOccupied)
-            {
-                GD.Print($"[TowerSlot] 槽位 {Name} 已被占用，忽略建造请求。");
-                return;
-            }
-
-            if (TowerManager.Instance == null)
-            {
-                GD.PrintErr($"[TowerSlot] TowerManager 单例不存在，无法建造（槽位 {Name}）。");
-                return;
-            }
-
-            var selectedData = TowerManager.Instance.CurrentSelectedTowerData;
-            if (selectedData == null)
-            {
-                GD.Print($"[TowerSlot] 槽位 {Name} 被点击，但尚未选择塔类型。请先点击 HUD 中的建造按钮选塔。");
-                return;
-            }
-
-            GD.Print($"[TowerSlot] 槽位 {Name} 请求建造 {selectedData.TowerName} (成本 {selectedData.BuildCost})");
-            TowerManager.Instance.TryBuildTower(this, selectedData);
-        }
-
-        /// <summary>
-        /// 出售当前槽位上的防御塔：按 TowerData.SellRefundRatio 返还金币、
-        /// 释放塔节点并清空占用状态，随后通过 EventBus 广播 OnTowerSold 事件。
-        /// 右键点击槽位触发；槽位为空时仅提示，不视为错误。
+        /// 出售当前槽位上的防御塔：按 TowerData.SellRefundRatio 对累计投入
+        /// （建造费用 + 历次升级费用）返还金币、释放塔节点并清空占用状态，
+        /// 随后通过 EventBus 广播 OnTowerSold 事件。
+        /// 右键点击槽位或经升级环「💰 出售」选项触发；槽位为空时仅提示，不视为错误。
         /// </summary>
         public void SellTower()
         {
@@ -138,7 +114,7 @@ namespace TowerDefence.Gameplay.Towers
             }
 
             string towerName = CurrentTower.Data.TowerName;
-            int refund = (int)Mathf.Floor(CurrentTower.Data.BuildCost * CurrentTower.Data.SellRefundRatio);
+            int refund = (int)Mathf.Floor(CurrentTower.InvestedGold * CurrentTower.Data.SellRefundRatio);
             Vector2 sellPosition = GlobalPosition;
 
             CurrentTower.QueueFree();

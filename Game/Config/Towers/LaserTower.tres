@@ -15,3 +15,5 @@ Damage = 18.0
 AttackInterval = 0.5
 BeamWidth = 5.0
 AttackColor = Color(1, 0.25, 0.35, 1)
+MaxLevel = 2
+UpgradeBaseCost = 90.0
