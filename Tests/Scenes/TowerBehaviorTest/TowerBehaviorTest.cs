@@ -9,11 +9,14 @@ namespace TowerDefence.Tests.Scenes
 {
     /// <summary>
     /// 防御塔攻击形态与目标策略行为测试（全代码构建，无 Inspector 绑定依赖）。
-    /// 覆盖两种攻击交付模式与四种行为：
+    /// 覆盖以下行为：
     /// 1) 即时模式：AOE 溅射、减速 debuff（多重取更强者/时长恢复）、tracer 拉线表现；
     /// 2) 弹道模式：单体弹延迟结算、AOE 弹落点溅射、减速弹命中附加 debuff、目标中途消灭空爆；
     /// 3) 目标策略：First 取最前线、Strongest 取血量最高者；
-    /// 4) 出售：SellTower 按 SellRefundRatio 返还金币并释放槽位。
+    /// 4) 槽位点击全链路：经视口输入管道的左键建造/右键出售；
+    /// 5) 激光塔：光束锁定、持续伤害、自动切换目标；
+    /// 6) 建造预览：选中显隐、槽位吸附、右键取消选择；
+    /// 7) 出售：SellTower 按 SellRefundRatio 返还金币并释放槽位。
     /// 全部断言结果打印 ✅/❌ 与最终汇总，无头模式可直接运行。
     /// </summary>
     public partial class TowerBehaviorTest : Node2D
@@ -57,6 +60,7 @@ namespace TowerDefence.Tests.Scenes
                 await TestTracerVisual(enemyData);
                 await TestSlotClickPipeline();
                 await TestBeamLaser(enemyData);
+                await TestBuildPreview();
                 await TestSell();
 
                 GD.Print($"[TowerBehaviorTest] ========== 测试结束：PASS {_passed} / FAIL {_failed} ==========");
@@ -444,7 +448,62 @@ namespace TowerDefence.Tests.Scenes
         }
 
         /// <summary>
-        /// 场景 8：出售。按 SellRefundRatio 返还金币并释放槽位。
+        /// 场景 8：建造预览指示器。选中塔类型时预览可见并吸附空闲槽位；右键空白处取消选择。
+        /// </summary>
+        private async System.Threading.Tasks.Task TestBuildPreview()
+        {
+            var towerManager = new TowerManager { Name = "TestPreviewTowerManager" };
+            AddChild(towerManager);
+            await Wait(0.1f);
+
+            BuildPreview preview = null;
+            foreach (Node child in towerManager.GetChildren())
+            {
+                if (child is BuildPreview found)
+                {
+                    preview = found;
+                    break;
+                }
+            }
+
+            AssertTrue(preview != null, "预览: TowerManager 自动创建预览指示器");
+
+            var towerData = new TowerData
+            {
+                TowerId = "test_preview",
+                TowerName = "测试预览塔",
+                BuildCost = 50,
+                AttackRange = 150f
+            };
+            TowerManager.Instance.CurrentSelectedTowerData = towerData;
+            await Wait(0.2f);
+            AssertTrue(preview.Visible, "预览: 选中塔类型后预览可见");
+
+            var slot = new TowerSlot { Name = "PreviewTestSlot", Position = new Vector2(400, 300) };
+            AddChild(slot);
+            await Wait(0.1f);
+
+            // 鼠标移动到槽位上（窗口坐标按最终变换反推）
+            Vector2 slotWindowPos = GetViewport().GetFinalTransform() * slot.GlobalPosition;
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = slotWindowPos });
+            Input.FlushBufferedEvents();
+            await Wait(0.2f);
+            AssertTrue(ReferenceEquals(preview.HoveredSlot, slot), "预览: 鼠标贴近空闲槽位时吸附");
+
+            // 右键空白处（远离槽位）取消选择
+            Vector2 awayWindowPos = GetViewport().GetFinalTransform() * new Vector2(100, 100);
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = true, Position = awayWindowPos });
+            Input.FlushBufferedEvents();
+            await Wait(0.2f);
+            AssertTrue(TowerManager.Instance.CurrentSelectedTowerData == null, "预览: 右键空白处取消选择");
+            AssertTrue(!preview.Visible, "预览: 取消选择后预览隐藏");
+
+            slot.QueueFree();
+            await Wait(0.1f);
+        }
+
+        /// <summary>
+        /// 场景 9：出售。按 SellRefundRatio 返还金币并释放槽位。
         /// </summary>
         private async System.Threading.Tasks.Task TestSell()
         {

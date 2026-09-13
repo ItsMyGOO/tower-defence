@@ -36,8 +36,14 @@ namespace TowerDefence.Gameplay.Towers
         /// 获取或设置当前玩家在 UI 中选中的待建造塔数据。
         /// 为 null 表示当前未选择任何塔；HUD 商店点击后应更新此字段，
         /// 随后在玩家点击 TowerSlot 时将此值传入 TryBuildTower。
+        /// 右键点击槽位以外区域时自动清空（取消选择）。
         /// </summary>
         public TowerData CurrentSelectedTowerData { get; set; }
+
+        /// <summary>
+        /// 建造预览指示器（射程圈/幽灵/吸附高亮），随选中状态自动显隐。
+        /// </summary>
+        private BuildPreview _buildPreview;
 
         #endregion
 
@@ -45,11 +51,14 @@ namespace TowerDefence.Gameplay.Towers
 
         /// <summary>
         /// 节点被添加到场景树时调用。
-        /// 初始化单例引用，确保全局仅有一个 TowerManager 实例。
+        /// 初始化单例引用并创建建造预览指示器子节点。
         /// </summary>
         public override void _Ready()
         {
             Instance = this;
+
+            _buildPreview = new BuildPreview { Name = "BuildPreview" };
+            AddChild(_buildPreview);
         }
 
         /// <summary>
@@ -62,6 +71,30 @@ namespace TowerDefence.Gameplay.Towers
             {
                 Instance = null;
             }
+        }
+
+        /// <summary>
+        /// 全局输入回调：右键点击槽位以外区域时取消当前选中的待建造塔类型。
+        /// 右键落在槽位上时不介入（由 TowerSlot 处理出售）；
+        /// 使用 _Input 而非 _UnhandledInput，避免占位 Control 吞事件导致收不到。
+        /// </summary>
+        /// <param name="event">输入事件</param>
+        public override void _Input(InputEvent @event)
+        {
+            if (@event is not InputEventMouseButton mouseBtn || !mouseBtn.Pressed) return;
+            if (mouseBtn.ButtonIndex != MouseButton.Right) return;
+            if (CurrentSelectedTowerData == null) return;
+
+            foreach (Node node in GetTree().GetNodesInGroup(TowerSlot.SlotGroup))
+            {
+                if (node is TowerSlot slot && IsInstanceValid(slot) && slot.ContainsViewportPosition(mouseBtn.Position))
+                {
+                    return;
+                }
+            }
+
+            GD.Print($"[TowerManager] 玩家右键空白处，取消选择待建造塔：{CurrentSelectedTowerData.TowerName}");
+            CurrentSelectedTowerData = null;
         }
 
         #endregion

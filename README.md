@@ -30,7 +30,7 @@
   * **Event Bus (全局信号总线)**：解耦 UI、经济系统与战场节点的直接引用。
   * **全局状态枚举**：GameManager 以 GameState 枚举控制准备期 / 波次进行中 / 胜负结算，通用 FSM 框架 🚧 规划中。
 * **UI/UX & 输入链条 (Commercial Polish)**：
-  * 鼠标 + 键盘（ESC 暂停）交互闭环 ✅；手柄与 UI 焦点系统、交互式建造指示器（范围预览/红框高亮）🚧 规划中。
+  * 鼠标 + 键盘（ESC 暂停）交互闭环 ✅；建造指示器（幽灵跟随、射程预览圈、槽位吸附高亮、占用红框提示、右键取消选择）✅；手柄与 UI 焦点系统 🚧 规划中。
 
 ### 3. 商业化闭环与底层框架 (Commercial Readiness)
 * **数据持久化** ✅（部分）：关卡解锁进度经 ConfigFile 落盘于用户目录；音量/全屏/按键重映射与星级高分 🚧 规划中。
@@ -53,7 +53,7 @@ res://
 │   │   ├── Enemies/             # BasicSlime / FastGoblin / TankOrc
 │   │   └── Waves/               # Wave_01..04 波次配置
 │   ├── Gameplay/                # 核心玩法层（按业务模块划分）
-│   │   ├── Towers/              # Tower / TowerManager / TowerSlot（左键建造、右键出售）
+│   │   ├── Towers/              # Tower / Projectile / BuildPreview / TowerManager / TowerSlot（左键建造、右键出售）
 │   │   ├── Enemies/             # Enemy（PathFollow2D，减速 debuff）
 │   │   ├── Waves/               # WaveManager（波次调度与存活追踪）
 │   │   ├── Map/                 # Level 通用关卡控制器 + Level_01/02.tscn（差异全走 Export）

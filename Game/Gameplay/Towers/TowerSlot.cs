@@ -16,6 +16,12 @@ namespace TowerDefence.Gameplay.Towers
     public partial class TowerSlot : Node2D
     {
         /// <summary>
+        /// 所有塔槽位所在的场景树分组名。
+        /// 供建造预览吸附、右键取消选择判定等按位置查询槽位的模块使用。
+        /// </summary>
+        public const string SlotGroup = "tower_slots";
+
+        /// <summary>
         /// 获取或设置槽位点击判定半径（像素），略大于槽位视觉块（50x50）以保证点击手感。
         /// </summary>
         [Export] public float ClickRadius { get; set; } = 35.0f;
@@ -33,6 +39,15 @@ namespace TowerDefence.Gameplay.Towers
         public Tower CurrentTower { get; private set; }
 
         /// <summary>
+        /// 节点被添加到场景树时调用：加入 tower_slots 分组，供建造预览吸附、
+        /// 右键取消选择判定等模块按位置查询槽位。
+        /// </summary>
+        public override void _Ready()
+        {
+            AddToGroup(SlotGroup);
+        }
+
+        /// <summary>
         /// 全局输入回调：左键按下进入建造入口，右键按下进入出售入口。
         /// 全局暂停或点击位置不在槽位半径内时忽略。
         /// </summary>
@@ -43,9 +58,7 @@ namespace TowerDefence.Gameplay.Towers
             if (@event is not InputEventMouseButton mouseBtn || !mouseBtn.Pressed) return;
             if (mouseBtn.ButtonIndex != MouseButton.Left && mouseBtn.ButtonIndex != MouseButton.Right) return;
 
-            // 事件坐标是视口坐标，经画布变换逆矩阵换算为世界坐标（兼容未来加入相机）
-            Vector2 worldPosition = GetCanvasTransform().AffineInverse() * mouseBtn.Position;
-            if (worldPosition.DistanceTo(GlobalPosition) > ClickRadius) return;
+            if (!ContainsViewportPosition(mouseBtn.Position)) return;
 
             if (mouseBtn.ButtonIndex == MouseButton.Left)
             {
@@ -55,6 +68,19 @@ namespace TowerDefence.Gameplay.Towers
             {
                 SellTower();
             }
+        }
+
+        /// <summary>
+        /// 判断视口坐标是否落在本槽位的点击判定半径内。
+        /// 事件坐标是视口坐标，经画布变换逆矩阵换算为世界坐标（兼容未来加入相机）。
+        /// 供本类点击判定与 TowerManager 的右键取消选择判定共用。
+        /// </summary>
+        /// <param name="viewportPosition">视口坐标</param>
+        /// <returns>在判定半径内返回 true</returns>
+        public bool ContainsViewportPosition(Vector2 viewportPosition)
+        {
+            Vector2 worldPosition = GetCanvasTransform().AffineInverse() * viewportPosition;
+            return worldPosition.DistanceTo(GlobalPosition) <= ClickRadius;
         }
 
         /// <summary>
@@ -148,6 +174,12 @@ namespace TowerDefence.Gameplay.Towers
                 GD.PrintErr($"[TowerSlot] 槽位 {Name} 放置失败：towerInstance 为 null。");
                 return false;
             }
+
+            CurrentTower = towerInstance;
+            IsOccupied = true;
+
+            towerInstance.Position = Vector2.Zero;
+            AddChild(towerInstance);
 
             CurrentTower = towerInstance;
             IsOccupied = true;
