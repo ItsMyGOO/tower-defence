@@ -157,12 +157,6 @@ namespace TowerDefence.Gameplay.Towers
             towerInstance.Position = Vector2.Zero;
             AddChild(towerInstance);
 
-            CurrentTower = towerInstance;
-            IsOccupied = true;
-
-            towerInstance.Position = Vector2.Zero;
-            AddChild(towerInstance);
-
             GD.Print($"[TowerSlot] 槽位 {Name} 成功放置防御塔: {towerInstance.Name}");
             return true;
         }

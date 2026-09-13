@@ -35,8 +35,19 @@ namespace TowerDefence.Gameplay.Enemies
         /// </summary>
         public float SpeedFactor => _speedFactor;
 
+        /// <summary>
+        /// 获取当前实际移动速度向量（像素/秒）。
+        /// 由帧间位移计算，已包含减速 debuff 的影响，供弹道预判落点使用。
+        /// </summary>
+        public Vector2 Velocity { get; private set; }
+
         private Area2D _hitArea;
         private CollisionShape2D _hitShape;
+
+        /// <summary>
+        /// 上一帧的世界坐标（帧间位移差分用）。
+        /// </summary>
+        private Vector2 _lastFramePosition;
 
         /// <summary>
         /// 当前移动速度倍率；多重减速取更强者（更小倍率），时长结束恢复 1.0。
@@ -72,6 +83,8 @@ namespace TowerDefence.Gameplay.Enemies
 
             SetupHitArea();
             SetupVisual();
+
+            _lastFramePosition = GlobalPosition;
         }
 
         /// <summary>
@@ -170,6 +183,12 @@ namespace TowerDefence.Gameplay.Enemies
             }
 
             Progress += Data.MoveSpeed * _speedFactor * (float)delta;
+
+            Vector2 currentPosition = GlobalPosition;
+            Velocity = delta > 0.0001
+                ? (currentPosition - _lastFramePosition) / (float)delta
+                : Vector2.Zero;
+            _lastFramePosition = currentPosition;
 
             if (ProgressRatio >= 1.0f)
             {

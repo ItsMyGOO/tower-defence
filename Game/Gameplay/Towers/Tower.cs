@@ -28,16 +28,6 @@ namespace TowerDefence.Gameplay.Towers
         private readonly List<Enemy> _targetsInRange = new();
 
         /// <summary>
-        /// 塔精灵的基础缩放（配置 Icon 时为 3 倍像素放大，占位时为 1），攻击反馈在其上做脉冲。
-        /// </summary>
-        private Vector2 _baseSpriteScale = Vector2.One;
-
-        /// <summary>
-        /// 待机动画计时器（驱动塔身轻微上下浮动）。
-        /// </summary>
-        private float _visualTime;
-
-        /// <summary>
         /// 获取当前塔的等级（从 1 开始）。
         /// </summary>
         public int CurrentLevel { get; private set; } = 1;
@@ -151,15 +141,13 @@ namespace TowerDefence.Gameplay.Towers
         }
 
         /// <summary>
-        /// 每帧更新逻辑：待机浮动动画所有模式通用；
-        /// 光束模式（Mode = Beam）额外在此按帧结算每秒伤害（Damage 即 DPS）并跟踪目标，
+        /// 每帧更新逻辑，仅光束模式（Mode = Beam）生效：
+        /// 锁定目标持续按帧结算每秒伤害（Damage 即 DPS），光束 Line2D 每帧跟踪目标位置；
         /// 目标死亡或离开攻击范围后自动重新选择，无可用目标时断束隐藏。
         /// </summary>
         /// <param name="delta">距上一帧经过的时间（秒）</param>
         public override void _Process(double delta)
         {
-            UpdateIdleAnimation(delta);
-
             if (Data == null || Data.Mode != AttackMode.Beam)
             {
                 return;
@@ -188,30 +176,6 @@ namespace TowerDefence.Gameplay.Towers
             EnsureBeamLine();
             _beamLine.Points = new[] { Vector2.Zero, _beamTarget.GlobalPosition - GlobalPosition };
             _beamLine.Visible = true;
-        }
-
-        /// <summary>
-        /// 待机动画：塔身以正弦规律轻微上下浮动（占位与像素素材通用）。
-        /// </summary>
-        /// <param name="delta">距上一帧经过的时间（秒）</param>
-        private void UpdateIdleAnimation(double delta)
-        {
-            if (_sprite == null) return;
-
-            _visualTime += (float)delta;
-            _sprite.Position = new Vector2(0.0f, Mathf.Sin(_visualTime * 2.5f) * 2.0f);
-        }
-
-        /// <summary>
-        /// 攻击反馈：塔身快速压缩-回弹一次（Tween 脉冲），使即时/弹道攻击有可感知的开火表现。
-        /// </summary>
-        private void PlayAttackFeedback()
-        {
-            if (_sprite == null) return;
-
-            Tween tween = CreateTween();
-            tween.TweenProperty(_sprite, "scale", _baseSpriteScale * 0.85f, 0.05f);
-            tween.TweenProperty(_sprite, "scale", _baseSpriteScale, 0.12f);
         }
 
         /// <summary>
@@ -260,8 +224,7 @@ namespace TowerDefence.Gameplay.Towers
             {
                 // 像素风素材：最近邻过滤 + 整数倍放大保持锐利
                 _sprite.TextureFilter = TextureFilterEnum.Nearest;
-                _baseSpriteScale = new Vector2(3.0f, 3.0f);
-                _sprite.Scale = _baseSpriteScale;
+                _sprite.Scale = new Vector2(3.0f, 3.0f);
             }
         }
 
@@ -386,19 +349,18 @@ namespace TowerDefence.Gameplay.Towers
                     break;
             }
 
-            PlayAttackFeedback();
             SpawnTracer(target);
         }
 
         /// <summary>
-        /// 发射一枚弹体飞向目标，伤害/debuff 延迟到弹体抵达时由 Projectile 结算。
+        /// 发射一枚弹体飞向预判落点，伤害/debuff 延迟到弹体抵达时由 Projectile 结算。
         /// 弹体挂载到塔的父节点（塔槽）而非塔自身，出售塔不会连带回收已发射的弹体。
         /// </summary>
         /// <param name="target">锁定的目标</param>
         private void LaunchProjectile(Enemy target)
         {
             var projectile = new Projectile();
-            projectile.Initialize(Data, target);
+            projectile.Initialize(Data, target, GlobalPosition);
 
             Node host = GetParent();
             if (host == null)

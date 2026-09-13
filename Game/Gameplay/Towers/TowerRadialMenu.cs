@@ -197,10 +197,13 @@ namespace TowerDefence.Gameplay.Towers
 
         /// <summary>
         /// 建造选项点击：关闭菜单后交给 TowerManager 执行建造事务（再次校验金币与占用）。
+        /// 菜单关闭后（BoundSlot 为 null）的重复触发直接忽略。
         /// </summary>
         /// <param name="data">选中的塔配置</param>
         private void OnBuildOptionPressed(TowerData data)
         {
+            if (BoundSlot == null) return;
+
             TowerSlot slot = BoundSlot;
             Close();
             GD.Print($"[TowerRadialMenu] 玩家选择建造 {data.TowerName}（{slot.Name}）。");
@@ -212,6 +215,8 @@ namespace TowerDefence.Gameplay.Towers
         /// </summary>
         private void OnUpgradeOptionPressed()
         {
+            if (BoundSlot == null) return;
+
             Tower tower = BoundSlot?.CurrentTower;
             Close();
             tower?.ApplyUpgrade();
@@ -222,6 +227,8 @@ namespace TowerDefence.Gameplay.Towers
         /// </summary>
         private void OnSellOptionPressed()
         {
+            if (BoundSlot == null) return;
+
             TowerSlot slot = BoundSlot;
             Close();
             slot?.SellTower();
