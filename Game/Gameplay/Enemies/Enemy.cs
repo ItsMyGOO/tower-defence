@@ -75,12 +75,42 @@ namespace TowerDefence.Gameplay.Enemies
         }
 
         /// <summary>
-        /// 敌人视觉：配置了 Icon 时以最近邻过滤 ×3 放大显示精灵，
-        /// 并隐藏场景中的色块占位（EnemyVisual）与名称标签（EnemyLabel）；
-        /// 未配置时保留占位视觉。
+        /// 敌人视觉优先级：行走动画条（AnimTexture）→ 静态图（Icon）→ 场景色块占位。
+        /// 动画与静态路径都以最近邻过滤 ×3 放大保持像素锐利，并隐藏占位节点。
         /// </summary>
         private void SetupVisual()
         {
+            if (Data.AnimTexture != null)
+            {
+                GetNodeOrNull("EnemyVisual")?.QueueFree();
+                GetNodeOrNull("EnemyLabel")?.QueueFree();
+
+                float frameWidth = (float)Data.AnimTexture.GetWidth() / Mathf.Max(1, Data.AnimFrames);
+                var frames = new SpriteFrames();
+                frames.SetAnimationSpeed("default", Data.AnimFps);
+                frames.SetAnimationLoop("default", true);
+
+                for (int i = 0; i < Data.AnimFrames; i++)
+                {
+                    frames.AddFrame("default", new AtlasTexture
+                    {
+                        Atlas = Data.AnimTexture,
+                        Region = new Rect2(i * frameWidth, 0.0f, frameWidth, Data.AnimTexture.GetHeight())
+                    });
+                }
+
+                var animSprite = new AnimatedSprite2D
+                {
+                    Name = "EnemySprite",
+                    SpriteFrames = frames,
+                    TextureFilter = TextureFilterEnum.Nearest,
+                    Scale = new Vector2(3.0f, 3.0f)
+                };
+                AddChild(animSprite);
+                animSprite.Play("default");
+                return;
+            }
+
             if (Data.Icon == null) return;
 
             GetNodeOrNull("EnemyVisual")?.QueueFree();

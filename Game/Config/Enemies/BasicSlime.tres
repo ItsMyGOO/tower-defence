@@ -16,3 +16,6 @@ MoveSpeed = 100.0
 RewardGold = 10
 DamageToPlayer = 1
 Icon = SubResource("AtlasTexture_frame0")
+AnimTexture = ExtResource("2_enemy_tex")
+AnimFrames = 4
+AnimFps = 7.0

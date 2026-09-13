@@ -17,9 +17,41 @@
 [ext_resource type="Resource" path="res://Game/Config/Waves/Wave_04.tres" id="14_wave_04"]
 [ext_resource type="Texture2D" path="res://Game/Art/Simple Tower Defense/Towers/Castle/spr_castle_red.png" id="18_castle_tex"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_castle"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle_0"]
 atlas = ExtResource("18_castle_tex")
 region = Rect2(0, 0, 52, 38)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle_1"]
+atlas = ExtResource("18_castle_tex")
+region = Rect2(52, 0, 52, 38)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle_2"]
+atlas = ExtResource("18_castle_tex")
+region = Rect2(104, 0, 52, 38)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle_3"]
+atlas = ExtResource("18_castle_tex")
+region = Rect2(156, 0, 52, 38)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_castle"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_castle_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_castle_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_castle_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_castle_3")
+}],
+"loop": true,
+"name": &"default",
+"speed": 6.0
+}]
 
 [sub_resource type="Curve2D" id="Curve2D_1"]
 
@@ -45,11 +77,12 @@ points = PackedVector2Array(100, 300, 500, 300, 500, 150, 900, 150, 900, 450, 13
 width = 40.0
 default_color = Color(0.45, 0.35, 0.2, 1)
 
-[node name="CastleBase" type="Sprite2D" parent="World"]
+[node name="CastleBase" type="AnimatedSprite2D" parent="World"]
 position = Vector2(1240, 440)
 scale = Vector2(3, 3)
 texture_filter = 1
-texture = SubResource("AtlasTexture_castle")
+sprite_frames = SubResource("SpriteFrames_castle")
+autoplay = "default"
 
 [node name="EnemyPath" type="Path2D" parent="World" unique_id=1481738760]
 position = Vector2(100, 300)

@@ -30,6 +30,22 @@ namespace TowerDefence.Config.Enemies
         [Export] public Texture2D Icon { get; set; }
 
         /// <summary>
+        /// 获取或设置行走动画条纹理（横向等宽帧条）。
+        /// 非 null 时敌人以 AnimatedSprite2D 循环播放（优先级高于 Icon 静态显示）。
+        /// </summary>
+        [Export] public Texture2D AnimTexture { get; set; }
+
+        /// <summary>
+        /// 获取或设置行走动画条的帧数（条宽 / 帧数 = 单帧宽）。
+        /// </summary>
+        [Export] public int AnimFrames { get; set; } = 4;
+
+        /// <summary>
+        /// 获取或设置行走动画播放帧率（FPS）。
+        /// </summary>
+        [Export] public float AnimFps { get; set; } = 7.0f;
+
+        /// <summary>
         /// 获取或设置敌人的最大生命值。
         /// 敌人出生时的初始生命值上限；受治疗、护盾等 Buff 影响时，实际当前 HP 在 Enemy 节点上保存。
         /// </summary>
