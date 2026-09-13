@@ -7,21 +7,22 @@ namespace TowerDefence.Gameplay.Towers
     /// <summary>
     /// 防御塔建造槽位节点。
     /// 用于标记地图上可放置防御塔的位置，维护占用状态与当前已建造的塔引用；
-    /// 同时自持点击检测：_Ready 时为自身挂载 Area2D 圆形碰撞体，
-    /// 玩家左键点击槽位即向 TowerManager 发起建造请求，右键点击已占用的槽位则出售塔位上的塔
-    /// （按 TowerData.SellRefundRatio 返还金币），无需外层关卡脚本代为处理。
+    /// 同时自持点击检测：左键点击槽位向 TowerManager 发起建造请求，
+    /// 右键点击已占用的槽位则出售塔位上的塔（按 TowerData.SellRefundRatio 返还金币）。
+    /// 点击采用 _Input + 画布坐标距离判定：地图上的占位 Control（如全屏 MapBackground）
+    /// 会在 GUI 阶段吞掉鼠标事件，物理拾取与 _UnhandledInput 都收不到，
+    /// 而 _Input 在 GUI 之前分发，是最可靠的入口。
     /// </summary>
     public partial class TowerSlot : Node2D
     {
         /// <summary>
-        /// 获取或设置槽位点击检测半径（像素）。
-        /// Area2D 圆形碰撞体按该半径创建，略大于槽位视觉块（50x50）以保证点击手感。
+        /// 获取或设置槽位点击判定半径（像素），略大于槽位视觉块（50x50）以保证点击手感。
         /// </summary>
         [Export] public float ClickRadius { get; set; } = 35.0f;
 
         /// <summary>
         /// 获取一个值，指示当前槽位是否已被防御塔占用。
-        /// 仅通过 PlaceTower() 内部赋值，外部只可读取，防止非法篡改状态。
+        /// 仅通过 PlaceTower()/SellTower() 内部赋值，外部只可读取，防止非法篡改状态。
         /// </summary>
         public bool IsOccupied { get; private set; } = false;
 
@@ -32,57 +33,25 @@ namespace TowerDefence.Gameplay.Towers
         public Tower CurrentTower { get; private set; }
 
         /// <summary>
-        /// 节点被添加到场景树时调用。
-        /// 创建槽位自有的点击检测碰撞体并绑定输入回调。
+        /// 全局输入回调：左键按下进入建造入口，右键按下进入出售入口。
+        /// 全局暂停或点击位置不在槽位半径内时忽略。
         /// </summary>
-        public override void _Ready()
-        {
-            SetupClickArea();
-        }
-
-        /// <summary>
-        /// 创建并配置点击检测用 Area2D 与圆形碰撞体。
-        /// 依赖 Godot 物理拾取（enable_object_picking，默认开启）将鼠标事件分发到本槽位。
-        /// </summary>
-        private void SetupClickArea()
-        {
-            var clickArea = new Area2D
-            {
-                Name = "SlotClickArea"
-            };
-            AddChild(clickArea);
-
-            clickArea.InputEvent += OnClickAreaInputEvent;
-
-            var shape = new CollisionShape2D
-            {
-                Name = "SlotClickShape",
-                Shape = new CircleShape2D
-                {
-                    Radius = ClickRadius
-                }
-            };
-            clickArea.AddChild(shape);
-        }
-
-        /// <summary>
-        /// 槽位点击碰撞体的输入回调。
-        /// 左键按下进入建造请求入口，右键按下进入出售入口；全局暂停时忽略所有请求。
-        /// </summary>
-        /// <param name="viewport">分发事件的视口（忽略）</param>
         /// <param name="event">输入事件</param>
-        /// <param name="shapeIdx">命中碰撞形状索引（忽略）</param>
-        private void OnClickAreaInputEvent(Node viewport, InputEvent @event, long shapeIdx)
+        public override void _Input(InputEvent @event)
         {
             if (GetTree().Paused) return;
-            if (@event is not InputEventMouseButton mouseBtn) return;
-            if (!mouseBtn.Pressed) return;
+            if (@event is not InputEventMouseButton mouseBtn || !mouseBtn.Pressed) return;
+            if (mouseBtn.ButtonIndex != MouseButton.Left && mouseBtn.ButtonIndex != MouseButton.Right) return;
+
+            // 事件坐标是视口坐标，经画布变换逆矩阵换算为世界坐标（兼容未来加入相机）
+            Vector2 worldPosition = GetCanvasTransform().AffineInverse() * mouseBtn.Position;
+            if (worldPosition.DistanceTo(GlobalPosition) > ClickRadius) return;
 
             if (mouseBtn.ButtonIndex == MouseButton.Left)
             {
                 RequestBuild();
             }
-            else if (mouseBtn.ButtonIndex == MouseButton.Right)
+            else
             {
                 SellTower();
             }

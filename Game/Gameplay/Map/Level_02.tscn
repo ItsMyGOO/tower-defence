@@ -32,6 +32,7 @@ PathControlPoints = PackedVector2Array(0, 0, 320, 0, 320, -200, 640, -200, 640, 
 [node name="MapBackground" type="ColorRect" parent="World"]
 offset_right = 1280.0
 offset_bottom = 720.0
+mouse_filter = 2
 color = Color(0.18, 0.15, 0.28, 1)
 
 [node name="PathHintVisual" type="Line2D" parent="World"]
