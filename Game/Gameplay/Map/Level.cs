@@ -1,6 +1,7 @@
 using Godot;
 using TowerDefence.Core.AutoLoads;
 using TowerDefence.Core.Managers;
+using TowerDefence.Gameplay.Economy;
 using TowerDefence.Gameplay.Waves;
 
 namespace TowerDefence.Gameplay.Map
@@ -14,8 +15,8 @@ namespace TowerDefence.Gameplay.Map
 	/// 运行时仅需一份 Level.cs 即可驱动任意数量的关卡场景，代码与配置彻底解耦。
 	///
 	/// 职责边界：槽位点击检测由 TowerSlot 自持（Area2D + 物理拾取），
-	/// 经济初始值由 EconomyManager._Ready 初始化、HUDView 自行拉取初值，
-	/// 本类只负责关卡编排 —— 路径构建、首波/后续波次调度与关键流程日志。
+	/// 经济初始值由本类在 _Ready 中通过 EconomyManager.ResetEconomy 统一下发，
+	/// 本类只负责关卡编排 —— 路径构建、波次调度与关键流程日志。
 	///
 	/// 通用生命周期：
 	/// _Ready → 1. 节点引用兜底 2. SetupEnemyPath 根据 PathControlPoints 生成 Curve2D
@@ -120,6 +121,7 @@ namespace TowerDefence.Gameplay.Map
 	{
 		ResolveNodeReferences();
 		SetupEnemyPath();
+		InitializeEconomy();
 		SubscribeEventBus();
 		ScheduleFirstWave();
 
@@ -189,6 +191,24 @@ namespace TowerDefence.Gameplay.Map
 
 		EnemyPathNode.Curve = curve;
 		GD.Print($"[Level] 动态构建敌人折线路径完成，共 {PathControlPoints.Length} 个控制点（{LevelDisplayName}）。");
+	}
+
+	/// <summary>
+	/// 用本关 Export 的 InitialGold / InitialMaxHp 重置经济管理器。
+	/// EconomyManager 自身的同名 Export 仅作为无关卡驱动时（测试场景等）的兜底默认值，
+	/// 两处配置此前并未打通（Level 的 InitialMaxHp 实际从未生效），现统一以关卡配置为准。
+	/// 重置后立即广播金币/血量事件，保证 HUD 首帧即显示本关初始值。
+	/// </summary>
+	private void InitializeEconomy()
+	{
+		if (EconomyManager.Instance == null)
+		{
+			GD.PrintErr("[Level] EconomyManager 单例不存在，跳过经济初始化。");
+			return;
+		}
+
+		EconomyManager.Instance.ResetEconomy(InitialGold, InitialMaxHp);
+		GD.Print($"[Level] 经济初始化 → 金币 {InitialGold} / HP {InitialMaxHp}（{LevelDisplayName}）。");
 	}
 
 	#endregion

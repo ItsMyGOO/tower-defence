@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://s4d4m30wag82"]
 
-[ext_resource type="Script" uid="uid://level_common_script" path="res://Game/Gameplay/Map/Level.cs" id="1_level_script"]
+[ext_resource type="Script" path="res://Game/Gameplay/Map/Level.cs" id="1_level_script"]
 [ext_resource type="Script" uid="uid://dgevr8wd70vuu" path="res://Game/Gameplay/Economy/EconomyManager.cs" id="2_economy_manager"]
 [ext_resource type="Script" uid="uid://b6fyk2pm3x8hi" path="res://Game/Gameplay/Waves/WaveManager.cs" id="3_wave_manager"]
 [ext_resource type="Script" uid="uid://81xv8r23aloi" path="res://Game/Gameplay/Towers/TowerManager.cs" id="4_tower_manager"]
@@ -163,7 +163,6 @@ horizontal_alignment = 1
 
 [node name="EconomyManager" type="Node" parent="Systems" unique_id=421817639]
 script = ExtResource("2_economy_manager")
-InitialGold = 150
 
 [node name="WaveManager" type="Node" parent="Systems" unique_id=495849305 node_paths=PackedStringArray("TargetPath")]
 script = ExtResource("3_wave_manager")

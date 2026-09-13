@@ -201,7 +201,6 @@ horizontal_alignment = 1
 
 [node name="EconomyManager" type="Node" parent="Systems"]
 script = ExtResource("2_economy_manager")
-InitialGold = 200
 
 [node name="WaveManager" type="Node" parent="Systems" node_paths=PackedStringArray("TargetPath")]
 script = ExtResource("3_wave_manager")

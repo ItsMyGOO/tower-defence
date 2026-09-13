@@ -97,6 +97,23 @@ namespace TowerDefence.Gameplay.Economy
         #region 公共接口
 
         /// <summary>
+        /// 重置经济与生命值状态并广播金币/血量变更事件。
+        /// 由关卡场景在 _Ready 中调用，以关卡 Export 的初始金币/生命值为准驱动本管理器；
+        /// 本管理器自身的 InitialGold / InitialHp Export 仅作为无关卡驱动时（测试场景等）的兜底默认值。
+        /// </summary>
+        /// <param name="initialGold">初始金币数量</param>
+        /// <param name="initialMaxHp">初始生命值</param>
+        public void ResetEconomy(int initialGold, int initialMaxHp)
+        {
+            CurrentGold = Mathf.Max(0, initialGold);
+            CurrentHp = Mathf.Max(0, initialMaxHp);
+            IsGameOver = false;
+
+            EventBus.RaiseGoldChanged(CurrentGold);
+            EventBus.RaisePlayerHpChanged(CurrentHp);
+        }
+
+        /// <summary>
         /// 检查当前金币是否足以支付指定金额。
         /// 用于防御塔建造、升级等操作的前置判定，不会实际扣除金币。
         /// </summary>
