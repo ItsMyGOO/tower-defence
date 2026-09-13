@@ -4,6 +4,10 @@
 [ext_resource type="Resource" path="res://Tests/Data/Enemies/Test_SlimeData.tres" id="2_test_slimedata"]
 
 [sub_resource type="Curve2D" id="Curve2D_1"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 800, 0)
+}
+point_count = 2
 
 [node name="EnemyTestRoot" type="Node2D" unique_id=657775795 node_paths=PackedStringArray("EnemyPath")]
 script = ExtResource("1_enemytest_script")
