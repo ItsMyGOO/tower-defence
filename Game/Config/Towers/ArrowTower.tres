@@ -6,7 +6,12 @@
 script = ExtResource("1_towerdata")
 TowerId = "arrow_tower"
 TowerName = "箭塔"
+Kind = 0
+Targeting = 0
+Mode = 1
 BuildCost = 50
 AttackRange = 200.0
 Damage = 25.0
 AttackInterval = 0.8
+ProjectileSpeed = 600.0
+AttackColor = Color(1, 0.85, 0.3, 1)

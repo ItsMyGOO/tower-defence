@@ -12,6 +12,12 @@ namespace TowerDefence.Gameplay.Enemies
     public partial class Enemy : PathFollow2D
     {
         /// <summary>
+        /// 所有存活敌人所在的场景树分组名。
+        /// 供弹体落点溅射等需要按位置查询敌人的模块使用，避免反向依赖 WaveManager。
+        /// </summary>
+        public const string EnemyGroup = "enemies";
+
+        /// <summary>
         /// 获取或设置当前敌人的配置数据资源。
         /// 实例化后必须在加入场景树前赋值（通过属性注入或在 Inspector 中指定）。
         /// </summary>
@@ -61,6 +67,8 @@ namespace TowerDefence.Gameplay.Enemies
             // PathFollow2D 的 Loop 默认为 true：不显式关闭时敌人走到路径终点会绕回起点循环移动，
             // ProgressRatio 永远到不了 1.0，漏怪扣血与波次完成判定全部失效。
             Loop = false;
+
+            AddToGroup(EnemyGroup);
 
             SetupHitArea();
         }

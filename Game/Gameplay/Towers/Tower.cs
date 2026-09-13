@@ -9,6 +9,8 @@ namespace TowerDefence.Gameplay.Towers
     /// 防御塔实体节点，负责范围内索敌与周期性攻击。
     /// 以 TowerData Resource 为配置来源，在 _Ready 中动态挂载可视化、
     /// 攻击定时器与范围碰撞体组件，通过 Area2D 信号维护目标列表并执行攻击。
+    /// 攻击表现按 Data.Mode 分流：Projectile 发射弹体延迟到抵达结算（箭/炮/冰霜塔），
+    /// Instant 瞬间结算并绘制 tracer（激光塔规划中的基础路径）。
     /// </summary>
     public partial class Tower : Node2D
     {
@@ -153,8 +155,16 @@ namespace TowerDefence.Gameplay.Towers
         }
 
         /// <summary>
+        /// 即时攻击 tracer 拉线的存留时长（秒），到时淡出并销毁。
+        /// </summary>
+        private const float TracerDuration = 0.12f;
+
+        /// <summary>
         /// 每次攻击间隔到点时的攻击入口。
-        /// 先从目标列表中按 Data.Targeting 策略选出目标，再按 Data.Kind 执行对应攻击形态。
+        /// 先从目标列表中按 Data.Targeting 策略选出目标：
+        /// - Mode = Projectile：发射弹体，抵达目标/落点时才结算（箭塔/炮塔/冰霜塔）；
+        /// - Mode = Instant：瞬间结算并绘制 tracer 拉线（为后续激光塔"光束锁定持续伤害"预留的基础路径，
+        ///   当前无内置塔使用，由行为测试覆盖）。
         /// </summary>
         private void TryAttackTarget()
         {
@@ -162,6 +172,12 @@ namespace TowerDefence.Gameplay.Towers
             var target = SelectTarget();
             if (target == null)
             {
+                return;
+            }
+
+            if (Data.Mode == AttackMode.Projectile)
+            {
+                LaunchProjectile(target);
                 return;
             }
 
@@ -177,6 +193,61 @@ namespace TowerDefence.Gameplay.Towers
                     AttackSingle(target);
                     break;
             }
+
+            SpawnTracer(target);
+        }
+
+        /// <summary>
+        /// 发射一枚弹体飞向目标，伤害/debuff 延迟到弹体抵达时由 Projectile 结算。
+        /// 弹体挂载到塔的父节点（塔槽）而非塔自身，出售塔不会连带回收已发射的弹体。
+        /// </summary>
+        /// <param name="target">锁定的目标</param>
+        private void LaunchProjectile(Enemy target)
+        {
+            var projectile = new Projectile();
+            projectile.Initialize(Data, target);
+
+            Node host = GetParent();
+            if (host == null)
+            {
+                host = this;
+            }
+            host.AddChild(projectile);
+            projectile.GlobalPosition = GlobalPosition;
+
+            GD.Print($"[Tower] 发射弹体 → {target.Name} | 弹速={Data.ProjectileSpeed}");
+        }
+
+        /// <summary>
+        /// 即时命中的 tracer 表现：从塔到目标绘制一条按 TowerData.AttackColor 着色的拉线，
+        /// 短暂淡出后自动销毁。仅 Mode = Instant 时调用。
+        /// </summary>
+        /// <param name="target">本次攻击的目标</param>
+        private void SpawnTracer(Enemy target)
+        {
+            if (target == null || !IsInstanceValid(target))
+            {
+                return;
+            }
+
+            var tracer = new Line2D
+            {
+                Name = "AttackTracer",
+                Width = 3.0f,
+                DefaultColor = new Color(Data.AttackColor, 0.9f),
+                Points = new[] { Vector2.Zero, target.GlobalPosition - GlobalPosition }
+            };
+            AddChild(tracer);
+
+            Tween tween = CreateTween();
+            tween.TweenProperty(tracer, "modulate:a", 0.0f, TracerDuration);
+            tween.Finished += () =>
+            {
+                if (IsInstanceValid(tracer))
+                {
+                    tracer.QueueFree();
+                }
+            };
         }
 
         /// <summary>

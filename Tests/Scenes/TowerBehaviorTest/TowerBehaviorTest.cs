@@ -9,9 +9,9 @@ namespace TowerDefence.Tests.Scenes
 {
     /// <summary>
     /// 防御塔攻击形态与目标策略行为测试（全代码构建，无 Inspector 绑定依赖）。
-    /// 覆盖四种行为：
-    /// 1) AOE 溅射：以目标为圆心，AoeRadius 内的多个敌人同时受击；
-    /// 2) 减速 debuff：命中后目标按 SlowFactor 减速、时长结束后恢复原速、多重减速取更强者；
+    /// 覆盖两种攻击交付模式与四种行为：
+    /// 1) 即时模式：AOE 溅射、减速 debuff（多重取更强者/时长恢复）、tracer 拉线表现；
+    /// 2) 弹道模式：单体弹延迟结算、AOE 弹落点溅射、减速弹命中附加 debuff、目标中途消灭空爆；
     /// 3) 目标策略：First 取最前线、Strongest 取血量最高者；
     /// 4) 出售：SellTower 按 SellRefundRatio 返还金币并释放槽位。
     /// 全部断言结果打印 ✅/❌ 与最终汇总，无头模式可直接运行。
@@ -53,6 +53,8 @@ namespace TowerDefence.Tests.Scenes
                 await TestAoeSplash(enemyData);
                 await TestSlowDebuff(enemyData);
                 await TestTargetingModes(enemyData);
+                await TestProjectileDelivery(enemyData);
+                await TestTracerVisual(enemyData);
                 await TestSell();
 
                 GD.Print($"[TowerBehaviorTest] ========== 测试结束：PASS {_passed} / FAIL {_failed} ==========");
@@ -187,7 +189,145 @@ namespace TowerDefence.Tests.Scenes
         }
 
         /// <summary>
-        /// 场景 4：出售。按 SellRefundRatio 返还金币并释放槽位。
+        /// 场景 4：弹道攻击（Mode = Projectile，三座正式塔的实际交付方式）。
+        /// 单体弹延迟结算、AOE 弹落点溅射、减速弹命中附加 debuff、目标中途消灭后弹体空爆。
+        /// </summary>
+        private async System.Threading.Tasks.Task TestProjectileDelivery(EnemyData enemyData)
+        {
+            // --- 单体弹（箭塔形态）：伤害延迟到弹体命中 ---
+            var e1 = SpawnEnemy(enemyData, 100);
+            var arrowData = new TowerData
+            {
+                TowerId = "test_arrow_proj",
+                TowerName = "测试箭弹塔",
+                Kind = TowerKind.Single,
+                Targeting = TargetingMode.First,
+                Mode = AttackMode.Projectile,
+                AttackRange = 500f,
+                Damage = 10f,
+                AttackInterval = 0.1f,
+                ProjectileSpeed = 600f
+            };
+            var arrowTower = SpawnTower(arrowData, new Vector2(100, 40));
+
+            // 首发于 0.1s 发射、约 0.17s 命中：0.12s 处弹体在飞、伤害尚未结算
+            await Wait(0.12f);
+            AssertTrue(Mathf.IsEqualApprox(e1.CurrentHp, enemyData.MaxHp), "弹道: 单体弹发射瞬间不结算伤害");
+            await Wait(0.5f);
+            AssertTrue(e1.CurrentHp < enemyData.MaxHp, "弹道: 单体弹命中后结算伤害");
+
+            arrowTower.QueueFree();
+            Cleanup(e1);
+
+            // --- AOE 弹（炮塔形态）：落点溅射命中相邻敌人 ---
+            var e2 = SpawnEnemy(enemyData, 100);
+            var e3 = SpawnEnemy(enemyData, 130);
+            var cannonData = new TowerData
+            {
+                TowerId = "test_cannon_proj",
+                TowerName = "测试炮弹塔",
+                Kind = TowerKind.Aoe,
+                Targeting = TargetingMode.First,
+                Mode = AttackMode.Projectile,
+                AttackRange = 500f,
+                Damage = 10f,
+                AttackInterval = 0.1f,
+                AoeRadius = 50f,
+                ProjectileSpeed = 500f
+            };
+            var cannonTower = SpawnTower(cannonData, new Vector2(115, 40));
+
+            await Wait(0.6f);
+            AssertTrue(e2.CurrentHp < enemyData.MaxHp && e3.CurrentHp < enemyData.MaxHp, "弹道: AOE 弹落点溅射命中相邻敌人");
+
+            Cleanup(cannonTower, e2, e3);
+
+            // --- 减速弹（冰霜塔形态）：命中附加减速 debuff ---
+            var e4 = SpawnEnemy(enemyData, 100);
+            var frostData = new TowerData
+            {
+                TowerId = "test_frost_proj",
+                TowerName = "测试冰弹塔",
+                Kind = TowerKind.Slow,
+                Targeting = TargetingMode.First,
+                Mode = AttackMode.Projectile,
+                AttackRange = 500f,
+                Damage = 5f,
+                AttackInterval = 0.1f,
+                SlowFactor = 0.5f,
+                SlowDuration = 2.0f,
+                ProjectileSpeed = 500f
+            };
+            var frostTower = SpawnTower(frostData, new Vector2(100, 40));
+
+            await Wait(0.6f);
+            AssertTrue(Mathf.IsEqualApprox(e4.SpeedFactor, 0.5f), "弹道: 减速弹命中后附加减速");
+
+            Cleanup(frostTower, e4);
+
+            // --- 空爆：目标在弹体飞行途中被消灭，流程不异常 ---
+            var e5 = SpawnEnemy(enemyData, 100);
+            var fizzData = new TowerData
+            {
+                TowerId = "test_fizz",
+                TowerName = "测试空爆塔",
+                Kind = TowerKind.Single,
+                Targeting = TargetingMode.First,
+                Mode = AttackMode.Projectile,
+                AttackRange = 500f,
+                Damage = 10f,
+                AttackInterval = 1.0f,
+                ProjectileSpeed = 300f
+            };
+            var fizzTower = SpawnTower(fizzData, new Vector2(100, 40));
+
+            await Wait(0.15f);
+            e5.TakeDamage(99999f);
+            await Wait(0.8f);
+            AssertTrue(!IsInstanceValid(e5), "弹道: 目标飞行途中被消灭后弹体空爆无异常");
+
+            Cleanup(fizzTower);
+        }
+
+        /// <summary>
+        /// 场景 5：即时模式 tracer 表现。攻击时应存在 Line2D 拉线子节点（激光塔预留路径的基础设施）。
+        /// </summary>
+        private async System.Threading.Tasks.Task TestTracerVisual(EnemyData enemyData)
+        {
+            var enemy = SpawnEnemy(enemyData, 100);
+            var data = new TowerData
+            {
+                TowerId = "test_tracer",
+                TowerName = "测试即时塔",
+                Kind = TowerKind.Single,
+                Targeting = TargetingMode.First,
+                Mode = AttackMode.Instant,
+                AttackRange = 500f,
+                Damage = 5f,
+                AttackInterval = 0.1f
+            };
+            var tower = SpawnTower(data, new Vector2(100, 40));
+
+            // 0.1s/0.2s 两次攻击，0.2s 的 tracer 存活至约 0.32s，0.25s 处必存在
+            await Wait(0.25f);
+
+            bool hasTracer = false;
+            foreach (Node child in tower.GetChildren())
+            {
+                if (child is Line2D)
+                {
+                    hasTracer = true;
+                    break;
+                }
+            }
+
+            AssertTrue(hasTracer, "即时模式: 攻击时生成 tracer 拉线子节点");
+
+            Cleanup(tower, enemy);
+        }
+
+        /// <summary>
+        /// 场景 6：出售。按 SellRefundRatio 返还金币并释放槽位。
         /// </summary>
         private async System.Threading.Tasks.Task TestSell()
         {

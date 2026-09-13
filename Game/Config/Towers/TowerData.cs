@@ -33,6 +33,19 @@ namespace TowerDefence.Config.Towers
     }
 
     /// <summary>
+    /// 防御塔的攻击表现与结算方式。
+    /// </summary>
+    public enum AttackMode
+    {
+        /// <summary>即时命中：攻击瞬间结算伤害/debuff，并绘制塔到目标的 tracer 拉线表现。</summary>
+        Instant,
+
+        /// <summary>弹道攻击：发射飞行弹体，抵达目标（或落点）时才结算伤害/debuff；
+        /// AOE 塔在弹体落点按 AoeRadius 溅射，与命中瞬间目标是否存活无关。</summary>
+        Projectile
+    }
+
+    /// <summary>
     /// 防御塔配置数据资源。
     /// 以 Godot Resource 形式存储塔的各项属性，是数据驱动架构的核心配置资产。
     /// 游戏逻辑层通过加载该资源实例读取塔的配置，禁止在代码中硬编码塔属性。
@@ -67,6 +80,22 @@ namespace TowerDefence.Config.Towers
         /// 获取或设置目标选择策略（最前线/最近/最强）。
         /// </summary>
         [Export] public TargetingMode Targeting { get; set; } = TargetingMode.First;
+
+        /// <summary>
+        /// 获取或设置攻击表现与结算方式（即时 tracer / 飞行弹体）。
+        /// </summary>
+        [Export] public AttackMode Mode { get; set; } = AttackMode.Instant;
+
+        /// <summary>
+        /// 获取或设置弹体飞行速度（像素/秒，Mode = Projectile 时生效）。
+        /// </summary>
+        [Export] public float ProjectileSpeed { get; set; } = 400.0f;
+
+        /// <summary>
+        /// 获取或设置攻击表现颜色：即时模式为 tracer 拉线颜色，弹道模式为弹体占位圆颜色。
+        /// 纯配置驱动的占位视觉，替换精灵图后仍可复用为粒子/弹体主色。
+        /// </summary>
+        [Export] public Color AttackColor { get; set; } = Colors.White;
 
         /// <summary>
         /// 获取或设置建造该防御塔所需消耗的金币数量。
