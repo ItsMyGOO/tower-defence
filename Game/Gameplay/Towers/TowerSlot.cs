@@ -1,13 +1,15 @@
 using Godot;
+using TowerDefence.Core.AutoLoads;
+using TowerDefence.Gameplay.Economy;
 
 namespace TowerDefence.Gameplay.Towers
 {
     /// <summary>
     /// 防御塔建造槽位节点。
     /// 用于标记地图上可放置防御塔的位置，维护占用状态与当前已建造的塔引用；
-    /// 同时自持点击检测：_Ready 时为自身挂载 Area2D 圆形碰撞体，玩家左键点击槽位即向
-    /// TowerManager 发起建造请求，无需外层关卡脚本代为做射线查询。
-    /// 占用后拒绝重复建造。
+    /// 同时自持点击检测：_Ready 时为自身挂载 Area2D 圆形碰撞体，
+    /// 玩家左键点击槽位即向 TowerManager 发起建造请求，右键点击已占用的槽位则出售塔位上的塔
+    /// （按 TowerData.SellRefundRatio 返还金币），无需外层关卡脚本代为处理。
     /// </summary>
     public partial class TowerSlot : Node2D
     {
@@ -65,7 +67,7 @@ namespace TowerDefence.Gameplay.Towers
 
         /// <summary>
         /// 槽位点击碰撞体的输入回调。
-        /// 仅响应未被暂停打断的鼠标左键按下事件；命中后进入建造请求入口。
+        /// 左键按下进入建造请求入口，右键按下进入出售入口；全局暂停时忽略所有请求。
         /// </summary>
         /// <param name="viewport">分发事件的视口（忽略）</param>
         /// <param name="event">输入事件</param>
@@ -74,9 +76,16 @@ namespace TowerDefence.Gameplay.Towers
         {
             if (GetTree().Paused) return;
             if (@event is not InputEventMouseButton mouseBtn) return;
-            if (mouseBtn.ButtonIndex != MouseButton.Left || !mouseBtn.Pressed) return;
+            if (!mouseBtn.Pressed) return;
 
-            RequestBuild();
+            if (mouseBtn.ButtonIndex == MouseButton.Left)
+            {
+                RequestBuild();
+            }
+            else if (mouseBtn.ButtonIndex == MouseButton.Right)
+            {
+                SellTower();
+            }
         }
 
         /// <summary>
@@ -106,6 +115,48 @@ namespace TowerDefence.Gameplay.Towers
 
             GD.Print($"[TowerSlot] 槽位 {Name} 请求建造 {selectedData.TowerName} (成本 {selectedData.BuildCost})");
             TowerManager.Instance.TryBuildTower(this, selectedData);
+        }
+
+        /// <summary>
+        /// 出售当前槽位上的防御塔：按 TowerData.SellRefundRatio 返还金币、
+        /// 释放塔节点并清空占用状态，随后通过 EventBus 广播 OnTowerSold 事件。
+        /// 右键点击槽位触发；槽位为空时仅提示，不视为错误。
+        /// </summary>
+        public void SellTower()
+        {
+            if (!IsOccupied)
+            {
+                GD.Print($"[TowerSlot] 槽位 {Name} 没有可出售的防御塔。");
+                return;
+            }
+
+            if (CurrentTower == null || !IsInstanceValid(CurrentTower) || CurrentTower.Data == null)
+            {
+                GD.PrintErr($"[TowerSlot] 槽位 {Name} 的防御塔引用无效，出售失败。");
+                return;
+            }
+
+            if (EconomyManager.Instance == null)
+            {
+                GD.PrintErr("[TowerSlot] EconomyManager 单例不存在，出售失败。");
+                return;
+            }
+
+            string towerName = CurrentTower.Data.TowerName;
+            int refund = (int)Mathf.Floor(CurrentTower.Data.BuildCost * CurrentTower.Data.SellRefundRatio);
+            Vector2 sellPosition = GlobalPosition;
+
+            CurrentTower.QueueFree();
+            CurrentTower = null;
+            IsOccupied = false;
+
+            if (refund > 0)
+            {
+                EconomyManager.Instance.AddGold(refund);
+            }
+
+            EventBus.RaiseTowerSold(sellPosition);
+            GD.Print($"[TowerSlot] ✅ 已出售 {towerName}，返还 {refund} 金币（槽位 {Name}）。");
         }
 
         /// <summary>

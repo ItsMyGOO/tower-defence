@@ -23,8 +23,24 @@ namespace TowerDefence.Gameplay.Enemies
         /// </summary>
         public float CurrentHp { get; private set; }
 
+        /// <summary>
+        /// 获取当前移动速度倍率（1.0 = 原速，0.5 = 减半）。
+        /// 由减速 debuff 驱动，供调试与行为测试断言。
+        /// </summary>
+        public float SpeedFactor => _speedFactor;
+
         private Area2D _hitArea;
         private CollisionShape2D _hitShape;
+
+        /// <summary>
+        /// 当前移动速度倍率；多重减速取更强者（更小倍率），时长结束恢复 1.0。
+        /// </summary>
+        private float _speedFactor = 1.0f;
+
+        /// <summary>
+        /// 减速 debuff 剩余持续时间（秒）。
+        /// </summary>
+        private float _slowRemaining;
 
         /// <summary>
         /// 节点被添加到场景树时调用。
@@ -75,20 +91,46 @@ namespace TowerDefence.Gameplay.Enemies
 
         /// <summary>
         /// 每帧更新逻辑。
-        /// 沿路径向前推进 Progress 并检测是否已到达路径尽头。
+        /// 驱动减速 debuff 计时，沿路径按当前速度倍率推进 Progress，并检测是否已到达路径尽头。
         /// </summary>
         /// <param name="delta">距上一帧经过的时间（秒）</param>
         public override void _Process(double delta)
         {
             if (Data == null) return;
 
-            Progress += Data.MoveSpeed * (float)delta;
+            if (_slowRemaining > 0.0f)
+            {
+                _slowRemaining -= (float)delta;
+                if (_slowRemaining <= 0.0f)
+                {
+                    _slowRemaining = 0.0f;
+                    _speedFactor = 1.0f;
+                }
+            }
+
+            Progress += Data.MoveSpeed * _speedFactor * (float)delta;
 
             if (ProgressRatio >= 1.0f)
             {
                 EventBus.RaiseEnemyReachedEnd(Data.DamageToPlayer);
                 QueueFree();
             }
+        }
+
+        /// <summary>
+        /// 对敌人施加减速 debuff。
+        /// 多重减速的语义：倍率取更强者（更小值），持续时间取新时长与剩余时长中的更长者——
+        /// 弱而短的减速不会提前结束强而长的减速，但可以增强其倍率。
+        /// </summary>
+        /// <param name="factor">减速后的速度倍率，约定 [0.05, 1.0]，越小减速越强</param>
+        /// <param name="duration">减速持续时间（秒），传入非正数时忽略</param>
+        public void ApplySlow(float factor, float duration)
+        {
+            if (duration <= 0.0f) return;
+
+            factor = Mathf.Clamp(factor, 0.05f, 1.0f);
+            _speedFactor = Mathf.Min(_speedFactor, factor);
+            _slowRemaining = Mathf.Max(_slowRemaining, duration);
         }
 
         /// <summary>

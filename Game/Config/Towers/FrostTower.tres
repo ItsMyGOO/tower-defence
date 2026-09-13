@@ -4,12 +4,13 @@
 
 [resource]
 script = ExtResource("1_towerdata")
-TowerId = "cannon_tower"
-TowerName = "炮塔"
-Kind = 1
+TowerId = "frost_tower"
+TowerName = "冰霜塔"
+Kind = 2
 Targeting = 0
-BuildCost = 100
-AttackRange = 150.0
-Damage = 60.0
-AttackInterval = 1.5
-AoeRadius = 80.0
+BuildCost = 80
+AttackRange = 140.0
+Damage = 5.0
+AttackInterval = 1.2
+SlowFactor = 0.5
+SlowDuration = 2.0

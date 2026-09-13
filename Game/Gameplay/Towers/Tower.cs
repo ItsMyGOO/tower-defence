@@ -153,25 +153,131 @@ namespace TowerDefence.Gameplay.Towers
         }
 
         /// <summary>
-        /// 尝试从目标列表中攻击第一个存活敌人。
-        /// 若列表为空则跳过本次攻击；否则对目标调用 TakeDamage()。
+        /// 每次攻击间隔到点时的攻击入口。
+        /// 先从目标列表中按 Data.Targeting 策略选出目标，再按 Data.Kind 执行对应攻击形态。
         /// </summary>
         private void TryAttackTarget()
         {
+            PruneInvalidTargets();
+            var target = SelectTarget();
+            if (target == null)
+            {
+                return;
+            }
+
+            switch (Data.Kind)
+            {
+                case TowerKind.Aoe:
+                    AttackAoe(target);
+                    break;
+                case TowerKind.Slow:
+                    AttackSlow(target);
+                    break;
+                default:
+                    AttackSingle(target);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 清理目标列表中已被销毁的敌人实例，保证索敌只在有效实例上进行。
+        /// </summary>
+        private void PruneInvalidTargets()
+        {
+            _targetsInRange.RemoveAll(enemy => enemy == null || !IsInstanceValid(enemy));
+        }
+
+        /// <summary>
+        /// 按 Data.Targeting 策略从索敌范围内选择本次攻击的目标。
+        /// First 取沿路径推进最远者（最前线），Nearest 取距塔最近者，Strongest 取当前血量最高者。
+        /// </summary>
+        /// <returns>选中的目标；范围内无有效敌人时为 null</returns>
+        private Enemy SelectTarget()
+        {
             if (_targetsInRange.Count == 0)
             {
-                return;
+                return null;
             }
 
-            var target = _targetsInRange[0];
-            if (target == null || !IsInstanceValid(target))
+            Enemy best = _targetsInRange[0];
+            float bestScore = ScoreTarget(best);
+
+            for (int i = 1; i < _targetsInRange.Count; i++)
             {
-                _targetsInRange.RemoveAt(0);
-                return;
+                float score = ScoreTarget(_targetsInRange[i]);
+                if (score > bestScore)
+                {
+                    best = _targetsInRange[i];
+                    bestScore = score;
+                }
             }
 
+            return best;
+        }
+
+        /// <summary>
+        /// 计算候选目标在当前目标策略下的评分，评分最高者被选中。
+        /// Nearest 模式以距离平方的负值参与比较，从而统一为"分高者胜"。
+        /// </summary>
+        /// <param name="enemy">候选目标</param>
+        /// <returns>策略评分（越大越优先）</returns>
+        private float ScoreTarget(Enemy enemy)
+        {
+            switch (Data.Targeting)
+            {
+                case TargetingMode.Nearest:
+                    return -GlobalPosition.DistanceSquaredTo(enemy.GlobalPosition);
+                case TargetingMode.Strongest:
+                    return enemy.CurrentHp;
+                case TargetingMode.First:
+                default:
+                    return enemy.ProgressRatio;
+            }
+        }
+
+        /// <summary>
+        /// 单体攻击：仅对目标造成 Data.Damage 伤害。
+        /// </summary>
+        /// <param name="target">选中的目标</param>
+        private void AttackSingle(Enemy target)
+        {
             target.TakeDamage(Data.Damage);
             GD.Print($"[Tower] 攻击 {target.Name} | 伤害={Data.Damage} | 目标剩余HP={target.CurrentHp:F1}");
+        }
+
+        /// <summary>
+        /// 范围攻击：以目标为圆心，对 Data.AoeRadius 半径内所有索敌范围中的敌人造成伤害。
+        /// </summary>
+        /// <param name="target">溅射圆心的目标</param>
+        private void AttackAoe(Enemy target)
+        {
+            float aoeRadiusSq = Data.AoeRadius * Data.AoeRadius;
+            int hitCount = 0;
+
+            for (int i = 0; i < _targetsInRange.Count; i++)
+            {
+                var enemy = _targetsInRange[i];
+                if (enemy == null || !IsInstanceValid(enemy)) continue;
+
+                if (enemy.GlobalPosition.DistanceSquaredTo(target.GlobalPosition) <= aoeRadiusSq)
+                {
+                    enemy.TakeDamage(Data.Damage);
+                    hitCount++;
+                }
+            }
+
+            GD.Print($"[Tower] 范围攻击 {target.Name} | 单体伤害={Data.Damage} | 溅射半径={Data.AoeRadius} | 命中数={hitCount}");
+        }
+
+        /// <summary>
+        /// 减速攻击：对目标造成伤害，并附加 Data.SlowFactor 倍率、Data.SlowDuration 时长的减速 debuff。
+        /// </summary>
+        /// <param name="target">选中的目标</param>
+        private void AttackSlow(Enemy target)
+        {
+            target.TakeDamage(Data.Damage);
+            target.ApplySlow(Data.SlowFactor, Data.SlowDuration);
+            GD.Print($"[Tower] 减速攻击 {target.Name} | 伤害={Data.Damage} | 减速至 {Data.SlowFactor:P0} 持续 {Data.SlowDuration}s | 剩余HP={target.CurrentHp:F1}");
         }
 
         /// <summary>

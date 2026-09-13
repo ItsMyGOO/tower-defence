@@ -3,6 +3,36 @@ using Godot;
 namespace TowerDefence.Config.Towers
 {
     /// <summary>
+    /// 防御塔的攻击形态。
+    /// </summary>
+    public enum TowerKind
+    {
+        /// <summary>单体攻击：每次攻击仅命中选中的目标。</summary>
+        Single,
+
+        /// <summary>范围攻击：命中目标以及目标周围 AoeRadius 半径内的所有敌人。</summary>
+        Aoe,
+
+        /// <summary>减速攻击：命中目标并附加 SlowFactor 倍率的减速 debuff。</summary>
+        Slow
+    }
+
+    /// <summary>
+    /// 防御塔的目标选择策略。
+    /// </summary>
+    public enum TargetingMode
+    {
+        /// <summary>最前线：优先攻击沿路径推进最远的目标。</summary>
+        First,
+
+        /// <summary>最近：优先攻击距离塔最近的目标。</summary>
+        Nearest,
+
+        /// <summary>最强：优先攻击当前血量最高的目标。</summary>
+        Strongest
+    }
+
+    /// <summary>
     /// 防御塔配置数据资源。
     /// 以 Godot Resource 形式存储塔的各项属性，是数据驱动架构的核心配置资产。
     /// 游戏逻辑层通过加载该资源实例读取塔的配置，禁止在代码中硬编码塔属性。
@@ -29,10 +59,26 @@ namespace TowerDefence.Config.Towers
         [Export] public Texture2D Icon { get; set; }
 
         /// <summary>
+        /// 获取或设置防御塔的攻击形态（单体/范围/减速）。
+        /// </summary>
+        [Export] public TowerKind Kind { get; set; } = TowerKind.Single;
+
+        /// <summary>
+        /// 获取或设置目标选择策略（最前线/最近/最强）。
+        /// </summary>
+        [Export] public TargetingMode Targeting { get; set; } = TargetingMode.First;
+
+        /// <summary>
         /// 获取或设置建造该防御塔所需消耗的金币数量。
         /// 必须为非负整数；游戏逻辑层在放置塔前需校验玩家金币是否充足。
         /// </summary>
         [Export] public int BuildCost { get; set; } = 100;
+
+        /// <summary>
+        /// 获取或设置出售该防御塔时返还的金币比例（相对 BuildCost）。
+        /// 0.5 表示出售返还一半造价；实际返还金额向下取整。
+        /// </summary>
+        [Export] public float SellRefundRatio { get; set; } = 0.5f;
 
         /// <summary>
         /// 获取或设置防御塔的攻击范围（世界坐标单位，像素）。
@@ -51,5 +97,23 @@ namespace TowerDefence.Config.Towers
         /// 值越小塔的攻速越快；游戏逻辑层使用计时器或累加 delta 判定是否可再次攻击。
         /// </summary>
         [Export] public float AttackInterval { get; set; } = 1.0f;
+
+        /// <summary>
+        /// 获取或设置范围攻击（Kind = Aoe）的溅射半径（像素）。
+        /// 以被选中目标为圆心，该半径内的所有在索敌范围内的敌人都会受到伤害。
+        /// </summary>
+        [Export] public float AoeRadius { get; set; } = 80.0f;
+
+        /// <summary>
+        /// 获取或设置减速攻击（Kind = Slow）命中后目标移动速度的剩余倍率。
+        /// 0.5 表示减速至一半速度；取值范围约定 [0.05, 1.0]，多重减速取更强者。
+        /// </summary>
+        [Export] public float SlowFactor { get; set; } = 0.5f;
+
+        /// <summary>
+        /// 获取或设置减速效果的持续时间（单位：秒）。
+        /// 时长结束后目标恢复原速；再次命中会刷新持续时间。
+        /// </summary>
+        [Export] public float SlowDuration { get; set; } = 2.0f;
     }
 }
