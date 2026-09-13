@@ -94,13 +94,13 @@ namespace TowerDefence.UI.HUD
 
             int initialGold = EconomyManager.Instance?.CurrentGold ?? 0;
             int initialHp = EconomyManager.Instance?.CurrentHp ?? 0;
-            int initialWave = 0;
+            int initialWave = 1;
 
             RefreshGoldLabel(initialGold);
             RefreshHpLabel(initialHp);
             RefreshWaveLabel(initialWave);
 
-            GD.Print($"[HUDView] 初始值刷新 → 金币:{initialGold}  血量:{initialHp}  波次:{initialWave + 1}");
+            GD.Print($"[HUDView] 初始值刷新 → 金币:{initialGold}  血量:{initialHp}  波次:{initialWave}");
         }
 
         /// <summary>
@@ -257,9 +257,10 @@ namespace TowerDefence.UI.HUD
 
         /// <summary>
         /// 处理波次开始事件。
-        /// 以 "波次: {索引}" 格式刷新 WaveLabel 的显示文本（索引从 1 开始显示）。
+        /// 以 "波次: {索引}" 格式刷新 WaveLabel 的显示文本。
+        /// 载荷约定为 1-based 波次序号：WaveManager 发布 WaveData.WaveIndex（.tres 配置从 1 起）。
         /// </summary>
-        /// <param name="waveIndex">当前波次的索引（从 0 开始传入）</param>
+        /// <param name="waveIndex">当前波次的序号（1-based，直接显示）</param>
         private void HandleWaveStarted(int waveIndex)
         {
             RefreshWaveLabel(waveIndex);
@@ -297,14 +298,14 @@ namespace TowerDefence.UI.HUD
 
         /// <summary>
         /// 刷新波次 Label 的显示文本。
-        /// 传入索引从 0 开始，显示时 +1 转化为玩家友好的 1-based 格式。
+        /// 载荷约定为 1-based 波次序号，直接显示不再偏移。
         /// </summary>
-        /// <param name="waveIndex">当前波次索引（0-based）</param>
+        /// <param name="waveIndex">当前波次序号（1-based）</param>
         private void RefreshWaveLabel(int waveIndex)
         {
             if (WaveLabel != null)
             {
-                WaveLabel.Text = $"波次: {waveIndex + 1}";
+                WaveLabel.Text = $"波次: {waveIndex}";
             }
         }
 

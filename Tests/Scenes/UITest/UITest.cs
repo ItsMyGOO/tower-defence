@@ -209,7 +209,7 @@ namespace TowerDefence.Tests.Scenes
             {
                 int nextWave = _currentWave + 1;
                 EventBus.RaiseWaveStarted(nextWave);
-                GD.Print($"[UITest] 模拟波次开始：第 {nextWave + 1} 波 (内部索引 {nextWave})");
+                GD.Print($"[UITest] 模拟波次开始：第 {nextWave} 波 (WaveIndex {nextWave})");
             });
 
             var hint = new Label
