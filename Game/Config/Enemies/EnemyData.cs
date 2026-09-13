@@ -23,6 +23,13 @@ namespace TowerDefence.Config.Enemies
         [Export] public string EnemyName { get; set; } = string.Empty;
 
         /// <summary>
+        /// 获取或设置敌人的精灵纹理。
+        /// 可以是整张单帧图，也可以是 AtlasTexture（取行走动画条中的某一帧）。
+        /// 为 null 时敌人使用场景中的色块占位视觉。
+        /// </summary>
+        [Export] public Texture2D Icon { get; set; }
+
+        /// <summary>
         /// 获取或设置敌人的最大生命值。
         /// 敌人出生时的初始生命值上限；受治疗、护盾等 Buff 影响时，实际当前 HP 在 Enemy 节点上保存。
         /// </summary>

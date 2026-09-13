@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="TowerData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="TowerData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://Game/Config/Towers/TowerData.cs" id="1_towerdata"]
+[ext_resource type="Texture2D" path="res://Game/Art/Simple Tower Defense/Towers/Combat Towers/spr_tower_lightning_tower.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_towerdata")
@@ -17,3 +18,4 @@ BeamWidth = 5.0
 AttackColor = Color(1, 0.25, 0.35, 1)
 MaxLevel = 2
 UpgradeBaseCost = 90.0
+Icon = ExtResource("2_icon")

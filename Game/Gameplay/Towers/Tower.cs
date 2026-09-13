@@ -220,6 +220,12 @@ namespace TowerDefence.Gameplay.Towers
                 };
                 _sprite.AddChild(placeholder);
             }
+            else
+            {
+                // 像素风素材：最近邻过滤 + 整数倍放大保持锐利
+                _sprite.TextureFilter = TextureFilterEnum.Nearest;
+                _sprite.Scale = new Vector2(3.0f, 3.0f);
+            }
         }
 
         /// <summary>

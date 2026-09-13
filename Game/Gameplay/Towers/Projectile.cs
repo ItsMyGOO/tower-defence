@@ -19,9 +19,35 @@ namespace TowerDefence.Gameplay.Towers
         /// </summary>
         private const float PlaceholderRadius = 5.0f;
 
+        /// <summary>
+        /// 弹体纹理存在时为 false：改用 Sprite2D 显示弹体贴图而非占位圆。
+        /// </summary>
+        private bool _usePlaceholderVisual = true;
+
         private TowerData _data;
         private Enemy _target;
         private Vector2 _lastTargetPosition;
+
+        /// <summary>
+        /// 弹体视觉初始化：配置了 ProjectileIcon 时创建 Sprite2D（最近邻过滤放大），
+        /// 否则保留 _Draw 占位圆。
+        /// </summary>
+        public override void _Ready()
+        {
+            if (_data?.ProjectileIcon != null)
+            {
+                _usePlaceholderVisual = false;
+
+                var sprite = new Sprite2D
+                {
+                    Name = "ProjectileSprite",
+                    Texture = _data.ProjectileIcon,
+                    TextureFilter = TextureFilterEnum.Nearest,
+                    Scale = new Vector2(2.0f, 2.0f)
+                };
+                AddChild(sprite);
+            }
+        }
 
         /// <summary>
         /// 配置并激活弹体。必须在 AddChild 之前调用。
@@ -64,14 +90,18 @@ namespace TowerDefence.Gameplay.Towers
             }
 
             GlobalPosition += toDestination.Normalized() * step;
+            Rotation = toDestination.Angle();
         }
 
         /// <summary>
-        /// 占位视觉：按 TowerData.AttackColor 绘制实心圆弹体。
+        /// 占位视觉：无弹体纹理时按 TowerData.AttackColor 绘制实心圆。
         /// </summary>
         public override void _Draw()
         {
-            DrawCircle(Vector2.Zero, PlaceholderRadius, _data?.AttackColor ?? Colors.White);
+            if (_usePlaceholderVisual)
+            {
+                DrawCircle(Vector2.Zero, PlaceholderRadius, _data?.AttackColor ?? Colors.White);
+            }
         }
 
         /// <summary>

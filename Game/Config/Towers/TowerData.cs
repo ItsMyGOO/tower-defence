@@ -71,9 +71,16 @@ namespace TowerDefence.Config.Towers
 
         /// <summary>
         /// 获取或设置防御塔的图标纹理。
-        /// 用于商店按钮、建造预览、塔信息面板等 UI 场景。
+        /// 用于塔身显示（商店按钮、建造预览、塔信息面板等 UI 场景）。
+        /// 像素风素材建议配合最近邻过滤放大使用。
         /// </summary>
         [Export] public Texture2D Icon { get; set; }
+
+        /// <summary>
+        /// 获取或设置弹道攻击（Mode = Projectile）的弹体纹理。
+        /// 为 null 时弹体使用 AttackColor 绘制的占位圆；非空时弹体旋转朝向飞行方向。
+        /// </summary>
+        [Export] public Texture2D ProjectileIcon { get; set; }
 
         /// <summary>
         /// 获取或设置防御塔的攻击形态（单体/范围/减速）。

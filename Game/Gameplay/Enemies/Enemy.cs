@@ -71,6 +71,29 @@ namespace TowerDefence.Gameplay.Enemies
             AddToGroup(EnemyGroup);
 
             SetupHitArea();
+            SetupVisual();
+        }
+
+        /// <summary>
+        /// 敌人视觉：配置了 Icon 时以最近邻过滤 ×3 放大显示精灵，
+        /// 并隐藏场景中的色块占位（EnemyVisual）与名称标签（EnemyLabel）；
+        /// 未配置时保留占位视觉。
+        /// </summary>
+        private void SetupVisual()
+        {
+            if (Data.Icon == null) return;
+
+            GetNodeOrNull("EnemyVisual")?.QueueFree();
+            GetNodeOrNull("EnemyLabel")?.QueueFree();
+
+            var sprite = new Sprite2D
+            {
+                Name = "EnemySprite",
+                Texture = Data.Icon,
+                TextureFilter = TextureFilterEnum.Nearest,
+                Scale = new Vector2(3.0f, 3.0f)
+            };
+            AddChild(sprite);
         }
 
         /// <summary>

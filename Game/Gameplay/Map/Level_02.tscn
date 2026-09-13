@@ -15,6 +15,11 @@
 [ext_resource type="Resource" path="res://Game/Config/Waves/Wave_03.tres" id="12_wave_03"]
 [ext_resource type="Resource" path="res://Game/Config/Waves/Wave_04.tres" id="13_wave_04"]
 [ext_resource type="Resource" path="res://Game/Config/Waves/Wave_01.tres" id="14_wave_01"]
+[ext_resource type="Texture2D" path="res://Game/Art/Simple Tower Defense/Towers/Castle/spr_castle_red.png" id="18_castle_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle"]
+atlas = ExtResource("18_castle_tex")
+region = Rect2(0, 0, 52, 38)
 
 [sub_resource type="Curve2D" id="Curve2D_1"]
 
