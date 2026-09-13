@@ -6,14 +6,21 @@ using TowerDefence.Core.AutoLoads;
 namespace TowerDefence.Core.Managers
 {
     /// <summary>
-    /// 全局音频管理器（单一职责版）。
+    /// 全局音频管理器（单一职责版，AutoLoad 常驻单例）。
+    /// 通过 AudioManager.tscn 包装场景注册为 AutoLoad，跨场景常驻：
+    /// BGM 在主菜单 / 选关 / 关卡间连续播放不中断；音效流统一在该 tscn 的 Inspector 中配置。
     /// 仅负责背景音乐循环播放、事件驱动的一次性音效动态实例化与自动回收；
     /// 视觉粒子特效、震屏等反馈由 EffectsManager 独立管理，避免职责混杂。
-    /// 建议挂载到主场景 Systems 节点下，所有音频完全通过 EventBus 解耦触发，
-    /// 与 Gameplay、经济、UI、特效等模块无硬编码引用。
+    /// 所有音频完全通过 EventBus 解耦触发，与 Gameplay、经济、UI、特效等模块无硬编码引用。
     /// </summary>
     public partial class AudioManager : Node
     {
+        /// <summary>
+        /// 获取 AudioManager 的全局单例实例（AutoLoad）。
+        /// 供未来 UI 点击音等主动播放场景访问；测试场景中的本地实例不注册单例。
+        /// </summary>
+        public static AudioManager Instance { get; private set; }
+
         #region 导出配置 —— 音频资源
 
         /// <summary>
@@ -75,10 +82,15 @@ namespace TowerDefence.Core.Managers
 
         /// <summary>
         /// 节点被添加到场景树时调用。
-        /// 创建内部 BGM 播放器并启动背景音乐，随后订阅 EventBus 中与音频触发相关的事件。
+        /// 设置 ProcessMode = Always 并创建内部 BGM 播放器，随后订阅 EventBus 中与音频触发相关的事件。
+        /// Always 是正确播报销利音效的关键：OnGameOver 链路中 GameManager 会先于/同帧置 Paused = true，
+        /// 默认 Inherit 的播放器会随全局暂停被冻结，导致胜负音效无声。
         /// </summary>
         public override void _Ready()
         {
+            Instance = this;
+            ProcessMode = ProcessModeEnum.Always;
+
             SetupBGMPlayer();
 
             EventBus.OnTowerBuilt += HandleTowerBuilt;
@@ -88,11 +100,16 @@ namespace TowerDefence.Core.Managers
         }
 
         /// <summary>
-        /// 节点即将从场景树移除时调用。
+        /// 节点即将从场景树移除时调用（仅发生在应用退出）。
         /// 取消所有 EventBus 订阅，停止 BGM，并强制回收所有尚未自然结束的 SFX 播放器，防止委托悬空与节点泄漏。
         /// </summary>
         public override void _ExitTree()
         {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+
             EventBus.OnTowerBuilt -= HandleTowerBuilt;
             EventBus.OnEnemyKilled -= HandleEnemyKilled;
             EventBus.OnEnemyReachedEnd -= HandleEnemyReachedEnd;

@@ -23,6 +23,8 @@ config/icon="res://icon.svg"
 [autoload]
 
 SceneManager="*res://Game/Core/Managers/SceneManager.cs"
+AudioManager="*res://Game/Core/Managers/AudioManager.tscn"
+EffectsManager="*res://Game/Core/Managers/EffectsManager.tscn"
 
 [display]
 

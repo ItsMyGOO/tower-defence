@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Game/Core/Managers/EffectsManager.cs" id="1_effects_manager"]
+[ext_resource type="PackedScene" path="res://Game/Gameplay/Effects/EnemyDeathEffect.tscn" id="2_death_effect"]
+
+[node name="EffectsManager" type="Node"]
+script = ExtResource("1_effects_manager")
+EnemyDeathEffectScene = ExtResource("2_death_effect")
