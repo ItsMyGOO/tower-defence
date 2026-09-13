@@ -8,5 +8,5 @@ TowerId = "test_arrow"
 TowerName = "测试箭塔"
 BuildCost = 50
 AttackRange = 200.0
-Damage = 25.0
+Damage = 50.0
 AttackInterval = 0.8
