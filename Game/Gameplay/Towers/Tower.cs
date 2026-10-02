@@ -9,6 +9,8 @@ namespace TowerDefence.Gameplay.Towers
     /// 防御塔实体节点，负责范围内索敌与周期性攻击。
     /// 以 TowerData Resource 为配置来源，在 _Ready 中动态挂载可视化、
     /// 攻击定时器与范围碰撞体组件，通过 Area2D 信号维护目标列表并执行攻击。
+    /// 攻击表现按 Data.Mode 分流：Projectile 发射弹体延迟到抵达结算（箭/炮/冰霜塔），
+    /// Instant 瞬间结算并绘制 tracer（激光塔规划中的基础路径）。
     /// </summary>
     public partial class Tower : Node2D
     {
@@ -23,7 +25,43 @@ namespace TowerDefence.Gameplay.Towers
         private Area2D _detectionArea;
         private CollisionShape2D _detectionShape;
 
+        /// <summary>
+        /// 索敌范围的圆形碰撞体引用。升级成长射程时同步更新其半径，
+        /// 否则 Area2D 索敌范围停留在初始值，射程成长对非光束塔不生效。
+        /// </summary>
+        private CircleShape2D _detectionCircle;
+
         private readonly List<Enemy> _targetsInRange = new();
+
+        /// <summary>
+        /// 获取当前塔的等级（从 1 开始）。
+        /// </summary>
+        public int CurrentLevel { get; private set; } = 1;
+
+        /// <summary>
+        /// 获取建造与升级在该塔上的累计投入（金币），出售返还按该值与 SellRefundRatio 计算。
+        /// </summary>
+        public int InvestedGold { get; private set; }
+
+        /// <summary>
+        /// 获取一个值，指示塔是否已达到最高等级。
+        /// </summary>
+        public bool IsMaxLevel => Data == null || CurrentLevel >= Data.MaxLevel;
+
+        /// <summary>
+        /// 光束攻击（Mode = Beam）常驻 Line2D 表现节点；无锁定目标时隐藏。
+        /// </summary>
+        private Line2D _beamLine;
+
+        /// <summary>
+        /// 光束攻击当前锁定的目标；死亡或离开范围后自动重新选择。
+        /// </summary>
+        private Enemy _beamTarget;
+
+        /// <summary>
+        /// 获取光束攻击当前锁定的目标（未锁定为 null），供测试与调试读取。
+        /// </summary>
+        public Enemy BeamTarget => _beamTarget;
 
         /// <summary>
         /// 节点被添加到场景树时调用。
@@ -39,11 +77,134 @@ namespace TowerDefence.Gameplay.Towers
                 return;
             }
 
+            // 每座塔持有 TowerData 的独立浅副本：升级直接改写副本数值（伤害/射程），
+            // 不会影响同型其他塔与共享的 .tres 配置；弹体等下游模块读取塔的 Data 即拿到当前等级数值。
+            Data = (TowerData)Data.Duplicate();
+            InvestedGold = Data.BuildCost;
+
             SetupSprite();
             SetupAttackTimer();
             SetupDetectionArea();
 
             GD.Print($"[Tower] 初始化完成: {Data.TowerName} | 范围={Data.AttackRange} | 伤害={Data.Damage} | 间隔={Data.AttackInterval}s");
+        }
+
+        /// <summary>
+        /// 获取下一级升级费用（按 UpgradeBaseCost 与 UpgradeCostFactor 逐级上浮，四舍五入）。
+        /// 已满级时调用无意义，返回 -1。
+        /// </summary>
+        /// <returns>下一级升级费用；已满级返回 -1</returns>
+        public int GetNextUpgradeCost()
+        {
+            if (Data == null || IsMaxLevel)
+            {
+                return -1;
+            }
+
+            return (int)Mathf.Round(Data.UpgradeBaseCost * Mathf.Pow(Data.UpgradeCostFactor, CurrentLevel - 1));
+        }
+
+        /// <summary>
+        /// 执行升级事务：扣费 → 等级 +1 → 在塔独立的数据副本上成长伤害与射程 → 累计投入。
+        /// 任意校验失败（配置缺失、已满级、金币不足、经济系统缺失）返回 false 且不产生任何变更。
+        /// </summary>
+        /// <returns>true 表示升级成功</returns>
+        public bool ApplyUpgrade()
+        {
+            if (Data == null)
+            {
+                GD.PrintErr("[Tower] 升级失败：TowerData 未配置。");
+                return false;
+            }
+
+            if (IsMaxLevel)
+            {
+                GD.Print($"[Tower] {Data.TowerName} 已满级（{Data.MaxLevel} 级），无法继续升级。");
+                return false;
+            }
+
+            var economy = Gameplay.Economy.EconomyManager.Instance;
+            if (economy == null)
+            {
+                GD.PrintErr("[Tower] 升级失败：EconomyManager 单例不存在。");
+                return false;
+            }
+
+            int cost = GetNextUpgradeCost();
+            if (!economy.TrySpendGold(cost))
+            {
+                GD.Print($"[Tower] 升级失败：金币不足。需要 {cost}，当前 {economy.CurrentGold}。");
+                return false;
+            }
+
+            CurrentLevel++;
+            InvestedGold += cost;
+            Data.Damage *= Data.DamageGrowthFactor;
+            Data.AttackRange *= Data.RangeGrowthFactor;
+            if (_detectionCircle != null)
+            {
+                _detectionCircle.Radius = Data.AttackRange;
+            }
+
+            GD.Print($"[Tower] ✅ {Data.TowerName} 升级至 {CurrentLevel} 级 | 花费 {cost} | 伤害={Data.Damage:F1} | 射程={Data.AttackRange:F0}");
+            return true;
+        }
+
+        /// <summary>
+        /// 每帧更新逻辑，仅光束模式（Mode = Beam）生效：
+        /// 锁定目标持续按帧结算每秒伤害（Damage 即 DPS），光束 Line2D 每帧跟踪目标位置；
+        /// 目标死亡或离开攻击范围后自动重新选择，无可用目标时断束隐藏。
+        /// </summary>
+        /// <param name="delta">距上一帧经过的时间（秒）</param>
+        public override void _Process(double delta)
+        {
+            if (Data == null || Data.Mode != AttackMode.Beam)
+            {
+                return;
+            }
+
+            PruneInvalidTargets();
+
+            float rangeSq = Data.AttackRange * Data.AttackRange;
+            if (_beamTarget == null || !IsInstanceValid(_beamTarget)
+                || GlobalPosition.DistanceSquaredTo(_beamTarget.GlobalPosition) > rangeSq)
+            {
+                _beamTarget = SelectTarget();
+            }
+
+            if (_beamTarget == null)
+            {
+                if (_beamLine != null)
+                {
+                    _beamLine.Visible = false;
+                }
+                return;
+            }
+
+            _beamTarget.TakeDamage(Data.Damage * (float)delta);
+
+            EnsureBeamLine();
+            _beamLine.Points = new[] { Vector2.Zero, _beamTarget.GlobalPosition - GlobalPosition };
+            _beamLine.Visible = true;
+        }
+
+        /// <summary>
+        /// 确保光束 Line2D 子节点存在（懒创建），宽度与颜色取自 TowerData 配置。
+        /// </summary>
+        private void EnsureBeamLine()
+        {
+            if (_beamLine != null)
+            {
+                return;
+            }
+
+            _beamLine = new Line2D
+            {
+                Name = "BeamLine",
+                Width = Data.BeamWidth,
+                DefaultColor = new Color(Data.AttackColor, 0.85f)
+            };
+            AddChild(_beamLine);
         }
 
         /// <summary>
@@ -69,12 +230,18 @@ namespace TowerDefence.Gameplay.Towers
                 };
                 _sprite.AddChild(placeholder);
             }
+            else
+            {
+                // 像素风素材：最近邻过滤 + 数据配置的放大倍数保持锐利
+                _sprite.TextureFilter = TextureFilterEnum.Nearest;
+                _sprite.Scale = new Vector2(Data.VisualScale, Data.VisualScale);
+            }
         }
 
         /// <summary>
         /// 创建并配置攻击间隔定时器。
-        /// WaitTime 取自 Data.AttackInterval，循环触发并自动启动，
-        /// Timeout 时执行一次索敌攻击判定。
+        /// WaitTime 取自 Data.AttackInterval，循环触发并自动启动，Timeout 时执行一次索敌攻击判定。
+        /// 光束模式（Beam）不走攻击计时器，伤害在 _Process 中按帧持续结算，故不自动启动。
         /// </summary>
         private void SetupAttackTimer()
         {
@@ -83,7 +250,7 @@ namespace TowerDefence.Gameplay.Towers
                 Name = "AttackTimer",
                 WaitTime = Data.AttackInterval,
                 OneShot = false,
-                Autostart = true
+                Autostart = Data.Mode != AttackMode.Beam
             };
             _attackTimer.Timeout += TryAttackTarget;
             AddChild(_attackTimer);
@@ -110,6 +277,7 @@ namespace TowerDefence.Gameplay.Towers
                     Radius = Data.AttackRange
                 }
             };
+            _detectionCircle = (CircleShape2D)_detectionShape.Shape;
             _detectionArea.AddChild(_detectionShape);
 
             _detectionArea.AreaEntered += OnEnemyAreaEntered;
@@ -153,25 +321,200 @@ namespace TowerDefence.Gameplay.Towers
         }
 
         /// <summary>
-        /// 尝试从目标列表中攻击第一个存活敌人。
-        /// 若列表为空则跳过本次攻击；否则对目标调用 TakeDamage()。
+        /// 即时攻击 tracer 拉线的存留时长（秒），到时淡出并销毁。
+        /// </summary>
+        private const float TracerDuration = 0.12f;
+
+        /// <summary>
+        /// 每次攻击间隔到点时的攻击入口。
+        /// 先从目标列表中按 Data.Targeting 策略选出目标：
+        /// - Mode = Projectile：发射弹体，抵达目标/落点时才结算（箭塔/炮塔/冰霜塔）；
+        /// - Mode = Instant：瞬间结算并绘制 tracer 拉线（为后续激光塔"光束锁定持续伤害"预留的基础路径，
+        ///   当前无内置塔使用，由行为测试覆盖）。
         /// </summary>
         private void TryAttackTarget()
         {
-            if (_targetsInRange.Count == 0)
+            PruneInvalidTargets();
+            var target = SelectTarget();
+            if (target == null)
             {
                 return;
             }
 
-            var target = _targetsInRange[0];
+            if (Data.Mode == AttackMode.Projectile)
+            {
+                LaunchProjectile(target);
+                return;
+            }
+
+            switch (Data.Kind)
+            {
+                case TowerKind.Aoe:
+                    AttackAoe(target);
+                    break;
+                case TowerKind.Slow:
+                    AttackSlow(target);
+                    break;
+                default:
+                    AttackSingle(target);
+                    break;
+            }
+
+            SpawnTracer(target);
+        }
+
+        /// <summary>
+        /// 发射一枚弹体飞向预判落点，伤害/debuff 延迟到弹体抵达时由 Projectile 结算。
+        /// 弹体挂载到塔的父节点（塔槽）而非塔自身，出售塔不会连带回收已发射的弹体。
+        /// </summary>
+        /// <param name="target">锁定的目标</param>
+        private void LaunchProjectile(Enemy target)
+        {
+            var projectile = new Projectile();
+            projectile.Initialize(Data, target, GlobalPosition);
+
+            Node host = GetParent();
+            if (host == null)
+            {
+                host = this;
+            }
+            host.AddChild(projectile);
+            projectile.GlobalPosition = GlobalPosition;
+
+            GD.Print($"[Tower] 发射弹体 → {target.Name} | 弹速={Data.ProjectileSpeed}");
+        }
+
+        /// <summary>
+        /// 即时命中的 tracer 表现：从塔到目标绘制一条按 TowerData.AttackColor 着色的拉线，
+        /// 短暂淡出后自动销毁。仅 Mode = Instant 时调用。
+        /// </summary>
+        /// <param name="target">本次攻击的目标</param>
+        private void SpawnTracer(Enemy target)
+        {
             if (target == null || !IsInstanceValid(target))
             {
-                _targetsInRange.RemoveAt(0);
                 return;
             }
 
+            var tracer = new Line2D
+            {
+                Name = "AttackTracer",
+                Width = 3.0f,
+                DefaultColor = new Color(Data.AttackColor, 0.9f),
+                Points = new[] { Vector2.Zero, target.GlobalPosition - GlobalPosition }
+            };
+            AddChild(tracer);
+
+            Tween tween = CreateTween();
+            tween.TweenProperty(tracer, "modulate:a", 0.0f, TracerDuration);
+            tween.Finished += () =>
+            {
+                if (IsInstanceValid(tracer))
+                {
+                    tracer.QueueFree();
+                }
+            };
+        }
+
+        /// <summary>
+        /// 清理目标列表中已被销毁的敌人实例，保证索敌只在有效实例上进行。
+        /// </summary>
+        private void PruneInvalidTargets()
+        {
+            _targetsInRange.RemoveAll(enemy => enemy == null || !IsInstanceValid(enemy));
+        }
+
+        /// <summary>
+        /// 按 Data.Targeting 策略从索敌范围内选择本次攻击的目标。
+        /// First 取沿路径推进最远者（最前线），Nearest 取距塔最近者，Strongest 取当前血量最高者。
+        /// </summary>
+        /// <returns>选中的目标；范围内无有效敌人时为 null</returns>
+        private Enemy SelectTarget()
+        {
+            if (_targetsInRange.Count == 0)
+            {
+                return null;
+            }
+
+            Enemy best = _targetsInRange[0];
+            float bestScore = ScoreTarget(best);
+
+            for (int i = 1; i < _targetsInRange.Count; i++)
+            {
+                float score = ScoreTarget(_targetsInRange[i]);
+                if (score > bestScore)
+                {
+                    best = _targetsInRange[i];
+                    bestScore = score;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// 计算候选目标在当前目标策略下的评分，评分最高者被选中。
+        /// Nearest 模式以距离平方的负值参与比较，从而统一为"分高者胜"。
+        /// </summary>
+        /// <param name="enemy">候选目标</param>
+        /// <returns>策略评分（越大越优先）</returns>
+        private float ScoreTarget(Enemy enemy)
+        {
+            switch (Data.Targeting)
+            {
+                case TargetingMode.Nearest:
+                    return -GlobalPosition.DistanceSquaredTo(enemy.GlobalPosition);
+                case TargetingMode.Strongest:
+                    return enemy.CurrentHp;
+                case TargetingMode.First:
+                default:
+                    return enemy.ProgressRatio;
+            }
+        }
+
+        /// <summary>
+        /// 单体攻击：仅对目标造成 Data.Damage 伤害。
+        /// </summary>
+        /// <param name="target">选中的目标</param>
+        private void AttackSingle(Enemy target)
+        {
             target.TakeDamage(Data.Damage);
             GD.Print($"[Tower] 攻击 {target.Name} | 伤害={Data.Damage} | 目标剩余HP={target.CurrentHp:F1}");
+        }
+
+        /// <summary>
+        /// 范围攻击：以目标为圆心，对 Data.AoeRadius 半径内所有索敌范围中的敌人造成伤害。
+        /// </summary>
+        /// <param name="target">溅射圆心的目标</param>
+        private void AttackAoe(Enemy target)
+        {
+            float aoeRadiusSq = Data.AoeRadius * Data.AoeRadius;
+            int hitCount = 0;
+
+            for (int i = 0; i < _targetsInRange.Count; i++)
+            {
+                var enemy = _targetsInRange[i];
+                if (enemy == null || !IsInstanceValid(enemy)) continue;
+
+                if (enemy.GlobalPosition.DistanceSquaredTo(target.GlobalPosition) <= aoeRadiusSq)
+                {
+                    enemy.TakeDamage(Data.Damage);
+                    hitCount++;
+                }
+            }
+
+            GD.Print($"[Tower] 范围攻击 {target.Name} | 单体伤害={Data.Damage} | 溅射半径={Data.AoeRadius} | 命中数={hitCount}");
+        }
+
+        /// <summary>
+        /// 减速攻击：对目标造成伤害，并附加 Data.SlowFactor 倍率、Data.SlowDuration 时长的减速 debuff。
+        /// </summary>
+        /// <param name="target">选中的目标</param>
+        private void AttackSlow(Enemy target)
+        {
+            target.TakeDamage(Data.Damage);
+            target.ApplySlow(Data.SlowFactor, Data.SlowDuration);
+            GD.Print($"[Tower] 减速攻击 {target.Name} | 伤害={Data.Damage} | 减速至 {Data.SlowFactor:P0} 持续 {Data.SlowDuration}s | 剩余HP={target.CurrentHp:F1}");
         }
 
         /// <summary>

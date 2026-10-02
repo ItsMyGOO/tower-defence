@@ -4,10 +4,11 @@ using TowerDefence.Core.AutoLoads;
 namespace TowerDefence.Core.Managers
 {
     /// <summary>
-    /// 全局视觉反馈特效管理器。
+    /// 全局视觉反馈特效管理器（AutoLoad 常驻单例，经 EffectsManager.tscn 包装注册）。
     /// 严格遵循单一职责原则：仅管理 CPUParticles2D / GPUParticles2D 等视觉特效预制体的实例化与生命周期，
     /// 不承担任何音频播放职责（音效由 AudioManager 独立处理）。
     /// 所有特效完全通过 EventBus 订阅触发，无反向引用 TowerManager / Enemy / EconomyManager 等业务模块。
+    /// 特效实例挂载于本节点（场景树根层），与关卡场景解耦，关卡切换不影响特效回收。
     /// </summary>
     public partial class EffectsManager : Node
     {

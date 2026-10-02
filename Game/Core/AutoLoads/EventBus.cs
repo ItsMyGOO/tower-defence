@@ -28,24 +28,17 @@ namespace TowerDefence.Core.AutoLoads
         #region 防御塔
 
         /// <summary>
-        /// 当防御塔被成功放置到地图上时触发。
-        /// </summary>
-        /// <param name="gridPosition">防御塔所在的网格坐标</param>
-        /// <param name="towerId">防御塔的资源标识符或配置 ID</param>
-        public static event Action<Vector2I, string> OnTowerPlaced;
-
-        /// <summary>
-        /// 当防御塔被出售（移除）时触发。
-        /// </summary>
-        /// <param name="gridPosition">被出售防御塔所在的网格坐标</param>
-        public static event Action<Vector2I> OnTowerSold;
-
-        /// <summary>
         /// 当防御塔建造成功时触发。
         /// </summary>
         /// <param name="towerData">建造的塔数据资源</param>
         /// <param name="buildPosition">建造的世界坐标位置</param>
         public static event Action<Config.Towers.TowerData, Vector2> OnTowerBuilt;
+
+        /// <summary>
+        /// 当防御塔被出售（从槽位移除）时触发。
+        /// </summary>
+        /// <param name="sellPosition">被出售塔所在槽位的世界坐标位置，可用于音效/特效定位</param>
+        public static event Action<Vector2> OnTowerSold;
 
         #endregion
 
@@ -104,24 +97,17 @@ namespace TowerDefence.Core.AutoLoads
         public static void RaisePlayerHpChanged(int newHp) => OnPlayerHpChanged?.Invoke(newHp);
 
         /// <summary>
-        /// 发布防御塔放置事件。
-        /// </summary>
-        /// <param name="gridPosition">防御塔所在的网格坐标</param>
-        /// <param name="towerId">防御塔的资源标识符或配置 ID</param>
-        public static void RaiseTowerPlaced(Vector2I gridPosition, string towerId) => OnTowerPlaced?.Invoke(gridPosition, towerId);
-
-        /// <summary>
-        /// 发布防御塔出售事件。
-        /// </summary>
-        /// <param name="gridPosition">被出售防御塔所在的网格坐标</param>
-        public static void RaiseTowerSold(Vector2I gridPosition) => OnTowerSold?.Invoke(gridPosition);
-
-        /// <summary>
         /// 发布防御塔建造成功事件。
         /// </summary>
         /// <param name="towerData">建造的塔数据资源</param>
         /// <param name="buildPosition">建造的世界坐标位置</param>
         public static void RaiseTowerBuilt(Config.Towers.TowerData towerData, Vector2 buildPosition) => OnTowerBuilt?.Invoke(towerData, buildPosition);
+
+        /// <summary>
+        /// 发布防御塔出售事件。
+        /// </summary>
+        /// <param name="sellPosition">被出售塔所在槽位的世界坐标位置</param>
+        public static void RaiseTowerSold(Vector2 sellPosition) => OnTowerSold?.Invoke(sellPosition);
 
         /// <summary>
         /// 发布敌人击杀事件。

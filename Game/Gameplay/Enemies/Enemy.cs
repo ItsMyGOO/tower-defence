@@ -12,6 +12,12 @@ namespace TowerDefence.Gameplay.Enemies
     public partial class Enemy : PathFollow2D
     {
         /// <summary>
+        /// 所有存活敌人所在的场景树分组名。
+        /// 供弹体落点溅射等需要按位置查询敌人的模块使用，避免反向依赖 WaveManager。
+        /// </summary>
+        public const string EnemyGroup = "enemies";
+
+        /// <summary>
         /// 获取或设置当前敌人的配置数据资源。
         /// 实例化后必须在加入场景树前赋值（通过属性注入或在 Inspector 中指定）。
         /// </summary>
@@ -23,8 +29,41 @@ namespace TowerDefence.Gameplay.Enemies
         /// </summary>
         public float CurrentHp { get; private set; }
 
+        /// <summary>
+        /// 获取当前移动速度倍率（1.0 = 原速，0.5 = 减半）。
+        /// 由减速 debuff 驱动，供调试与行为测试断言。
+        /// </summary>
+        public float SpeedFactor => _speedFactor;
+
+        /// <summary>
+        /// 获取当前实际移动速度向量（像素/秒）。
+        /// 由帧间位移计算，已包含减速 debuff 的影响，供弹道预判落点使用。
+        /// </summary>
+        public Vector2 Velocity { get; private set; }
+
         private Area2D _hitArea;
         private CollisionShape2D _hitShape;
+
+        /// <summary>
+        /// 上一帧的世界坐标（帧间位移差分用）。
+        /// </summary>
+        private Vector2 _lastFramePosition;
+
+        /// <summary>
+        /// 当前移动速度倍率；多重减速取更强者（更小倍率），时长结束恢复 1.0。
+        /// </summary>
+        private float _speedFactor = 1.0f;
+
+        /// <summary>
+        /// 减速 debuff 剩余持续时间（秒）。
+        /// </summary>
+        private float _slowRemaining;
+
+        /// <summary>
+        /// 终态标志：击杀或逃脱事件已触发。QueueFree 帧末才生效，同一帧内后续伤害
+        /// 命中"已死"敌人不得重复结算（双倍金币/特效），逃脱与击杀互斥。
+        /// </summary>
+        private bool _isDead;
 
         /// <summary>
         /// 节点被添加到场景树时调用。
@@ -42,13 +81,74 @@ namespace TowerDefence.Gameplay.Enemies
             CurrentHp = Data.MaxHp;
             Progress = 0.0f;
 
+            // PathFollow2D 的 Loop 默认为 true：不显式关闭时敌人走到路径终点会绕回起点循环移动，
+            // ProgressRatio 永远到不了 1.0，漏怪扣血与波次完成判定全部失效。
+            Loop = false;
+
+            AddToGroup(EnemyGroup);
+
             SetupHitArea();
+            SetupVisual();
+
+            _lastFramePosition = GlobalPosition;
+        }
+
+        /// <summary>
+        /// 敌人视觉优先级：行走动画条（AnimTexture）→ 静态图（Icon）→ 场景色块占位。
+        /// 动画与静态路径都以最近邻过滤 ×3 放大保持像素锐利，并隐藏占位节点。
+        /// </summary>
+        private void SetupVisual()
+        {
+            if (Data.AnimTexture != null)
+            {
+                GetNodeOrNull("EnemyVisual")?.QueueFree();
+                GetNodeOrNull("EnemyLabel")?.QueueFree();
+
+                float frameWidth = (float)Data.AnimTexture.GetWidth() / Mathf.Max(1, Data.AnimFrames);
+                var frames = new SpriteFrames();
+                frames.SetAnimationSpeed("default", Data.AnimFps);
+                frames.SetAnimationLoop("default", true);
+
+                for (int i = 0; i < Data.AnimFrames; i++)
+                {
+                    frames.AddFrame("default", new AtlasTexture
+                    {
+                        Atlas = Data.AnimTexture,
+                        Region = new Rect2(i * frameWidth, 0.0f, frameWidth, Data.AnimTexture.GetHeight())
+                    });
+                }
+
+                var animSprite = new AnimatedSprite2D
+                {
+                    Name = "EnemySprite",
+                    SpriteFrames = frames,
+                    TextureFilter = TextureFilterEnum.Nearest,
+                    Scale = new Vector2(Data.VisualScale, Data.VisualScale)
+                };
+                AddChild(animSprite);
+                animSprite.Play("default");
+                return;
+            }
+
+            if (Data.Icon == null) return;
+
+            GetNodeOrNull("EnemyVisual")?.QueueFree();
+            GetNodeOrNull("EnemyLabel")?.QueueFree();
+
+            var sprite = new Sprite2D
+            {
+                Name = "EnemySprite",
+                Texture = Data.Icon,
+                TextureFilter = TextureFilterEnum.Nearest,
+                Scale = new Vector2(Data.VisualScale, Data.VisualScale)
+            };
+            AddChild(sprite);
         }
 
         /// <summary>
         /// 创建并配置用于防御塔索敌检测的 Area2D 与圆形碰撞体。
-        /// 碰撞半径采用固定值 16 像素（适配 ColorRect 占位视觉），
-        /// 使 Tower 的 DetectionArea 能够通过 Area 信号捕获该敌人。
+        /// 碰撞半径取自 Data.HitRadius，按敌人素材实际体型配置（默认 16 像素，
+        /// 下限钳制 1 防止误配 0 导致该敌人永远无法被索敌）。
         /// </summary>
         private void SetupHitArea()
         {
@@ -63,7 +163,7 @@ namespace TowerDefence.Gameplay.Enemies
                 Name = "EnemyHitShape",
                 Shape = new CircleShape2D
                 {
-                    Radius = 16.0f
+                    Radius = Mathf.Max(1.0f, Data.HitRadius)
                 }
             };
             _hitArea.AddChild(_hitShape);
@@ -71,36 +171,72 @@ namespace TowerDefence.Gameplay.Enemies
 
         /// <summary>
         /// 每帧更新逻辑。
-        /// 沿路径向前推进 Progress 并检测是否已到达路径尽头。
+        /// 驱动减速 debuff 计时，沿路径按当前速度倍率推进 Progress，并检测是否已到达路径尽头。
         /// </summary>
         /// <param name="delta">距上一帧经过的时间（秒）</param>
         public override void _Process(double delta)
         {
-            if (Data == null) return;
+            if (Data == null || _isDead) return;
 
-            Progress += Data.MoveSpeed * (float)delta;
+            if (_slowRemaining > 0.0f)
+            {
+                _slowRemaining -= (float)delta;
+                if (_slowRemaining <= 0.0f)
+                {
+                    _slowRemaining = 0.0f;
+                    _speedFactor = 1.0f;
+                }
+            }
+
+            Progress += Data.MoveSpeed * _speedFactor * (float)delta;
+
+            Vector2 currentPosition = GlobalPosition;
+            Velocity = delta > 0.0001
+                ? (currentPosition - _lastFramePosition) / (float)delta
+                : Vector2.Zero;
+            _lastFramePosition = currentPosition;
 
             if (ProgressRatio >= 1.0f)
             {
+                _isDead = true;
                 EventBus.RaiseEnemyReachedEnd(Data.DamageToPlayer);
                 QueueFree();
             }
         }
 
         /// <summary>
+        /// 对敌人施加减速 debuff。
+        /// 多重减速的语义：倍率取更强者（更小值），持续时间取新时长与剩余时长中的更长者——
+        /// 弱而短的减速不会提前结束强而长的减速，但可以增强其倍率。
+        /// </summary>
+        /// <param name="factor">减速后的速度倍率，约定 [0.05, 1.0]，越小减速越强</param>
+        /// <param name="duration">减速持续时间（秒），传入非正数时忽略</param>
+        public void ApplySlow(float factor, float duration)
+        {
+            if (duration <= 0.0f) return;
+
+            factor = Mathf.Clamp(factor, 0.05f, 1.0f);
+            _speedFactor = Mathf.Min(_speedFactor, factor);
+            _slowRemaining = Mathf.Max(_slowRemaining, duration);
+        }
+
+        /// <summary>
         /// 对敌人造成伤害并扣除当前生命值。
         /// 扣血后若 HP 小于等于 0，将触发击杀事件并销毁自身节点。
+        /// 幂等：敌人已死亡（击杀或逃脱已触发）时直接忽略后续伤害，
+        /// 防止同帧多源伤害重复发放击杀奖励与特效。
         /// </summary>
         /// <param name="damage">本次伤害的数值（非负浮点数）；负值会被截断为 0</param>
         public void TakeDamage(float damage)
         {
-            if (Data == null) return;
+            if (Data == null || _isDead) return;
             if (damage < 0.0f) damage = 0.0f;
 
             CurrentHp -= damage;
 
             if (CurrentHp <= 0.0f)
             {
+                _isDead = true;
                 EventBus.RaiseEnemyKilled(Data.EnemyId, Data.RewardGold, GlobalPosition);
                 QueueFree();
             }

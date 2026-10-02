@@ -11,9 +11,6 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_level_select_script")
 BackButton = NodePath("TopBar/BackButton")
-LevelButton_01 = NodePath("CenterContainer/GridContainer/LevelButton_01")
-LevelButton_02 = NodePath("CenterContainer/GridContainer/LevelButton_02")
-LevelButton_03 = NodePath("CenterContainer/GridContainer/LevelButton_03")
 
 [node name="Background" type="ColorRect" parent="."]
 layout_mode = 1
@@ -64,26 +61,3 @@ theme_override_constants/h_separation = 40
 theme_override_constants/v_separation = 40
 columns = 3
 
-[node name="LevelButton_01" type="Button" parent="CenterContainer/GridContainer"]
-layout_mode = 2
-custom_minimum_size = Vector2(220, 180)
-text = "第 1 关 · 新手教学"
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 22
-
-[node name="LevelButton_02" type="Button" parent="CenterContainer/GridContainer"]
-layout_mode = 2
-custom_minimum_size = Vector2(220, 180)
-text = "第 2 关 · 进阶挑战"
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 22
-
-[node name="LevelButton_03" type="Button" parent="CenterContainer/GridContainer"]
-layout_mode = 2
-custom_minimum_size = Vector2(220, 180)
-text = "第 3 关 · 敬请期待"
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 22

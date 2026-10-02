@@ -2,12 +2,13 @@
 .godot/
 .import/
 export.cfg
-export_presets.cfg
 
 # Godot mono / C# generated files
 .mono/
 *.csproj.old
-*.sln
+
+# 注：export_presets.cfg 与 *.sln 需要提交（团队共享导出配置与解决方案结构；
+# Godot 4 的导出凭证在独立的 export_credentials.cfg，不在本仓库中）
 
 # Build outputs
 bin/

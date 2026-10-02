@@ -5,15 +5,12 @@
 [ext_resource type="Resource" path="res://Tests/Data/Towers/Test_ArrowTower.tres" id="3_test_towerdata"]
 
 [sub_resource type="Curve2D" id="Curve2D_1"]
-points/0 = Vector2(-50, 0)
-points/1 = Vector2(150, 0)
-points/2 = Vector2(300, 0)
-points/3 = Vector2(400, 0)
-points/4 = Vector2(500, 0)
-points/5 = Vector2(650, 0)
-points/6 = Vector2(850, 0)
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, -50, 0, 0, 0, 0, 0, 150, 0, 0, 0, 0, 0, 300, 0, 0, 0, 0, 0, 400, 0, 0, 0, 0, 0, 500, 0, 0, 0, 0, 0, 650, 0, 0, 0, 0, 0, 850, 0)
+}
+point_count = 7
 
-[node name="TowerTestRoot" type="Node2D" unique_id=11001001]
+[node name="TowerTestRoot" type="Node2D" unique_id=11001001 node_paths=PackedStringArray("EnemyPath")]
 script = ExtResource("1_towertest_script")
 EnemyPath = NodePath("EnemyPath")
 TestEnemyData = ExtResource("2_test_slimedata")

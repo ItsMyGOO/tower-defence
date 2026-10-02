@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://s4d4m30wag82"]
 
-[ext_resource type="Script" uid="uid://level_common_script" path="res://Game/Gameplay/Map/Level.cs" id="1_level_script"]
+[ext_resource type="Script" path="res://Game/Gameplay/Map/Level.cs" id="1_level_script"]
 [ext_resource type="Script" uid="uid://dgevr8wd70vuu" path="res://Game/Gameplay/Economy/EconomyManager.cs" id="2_economy_manager"]
 [ext_resource type="Script" uid="uid://b6fyk2pm3x8hi" path="res://Game/Gameplay/Waves/WaveManager.cs" id="3_wave_manager"]
 [ext_resource type="Script" uid="uid://81xv8r23aloi" path="res://Game/Gameplay/Towers/TowerManager.cs" id="4_tower_manager"]
@@ -15,9 +15,43 @@
 [ext_resource type="Resource" path="res://Game/Config/Waves/Wave_02.tres" id="12_wave_02"]
 [ext_resource type="Resource" path="res://Game/Config/Waves/Wave_03.tres" id="13_wave_03"]
 [ext_resource type="Resource" path="res://Game/Config/Waves/Wave_04.tres" id="14_wave_04"]
-[ext_resource type="Script" path="res://Game/Core/Managers/AudioManager.cs" id="15_audio_manager"]
-[ext_resource type="PackedScene" path="res://Game/Gameplay/Effects/EnemyDeathEffect.tscn" id="16_death_effect"]
-[ext_resource type="Script" path="res://Game/Core/Managers/EffectsManager.cs" id="17_effects_manager"]
+[ext_resource type="Texture2D" path="res://Game/Art/Simple Tower Defense/Towers/Castle/spr_castle_red.png" id="18_castle_tex"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle_0"]
+atlas = ExtResource("18_castle_tex")
+region = Rect2(0, 0, 52, 38)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle_1"]
+atlas = ExtResource("18_castle_tex")
+region = Rect2(52, 0, 52, 38)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle_2"]
+atlas = ExtResource("18_castle_tex")
+region = Rect2(104, 0, 52, 38)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_castle_3"]
+atlas = ExtResource("18_castle_tex")
+region = Rect2(156, 0, 52, 38)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_castle"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_castle_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_castle_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_castle_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_castle_3")
+}],
+"loop": true,
+"name": &"default",
+"speed": 6.0
+}]
 
 [sub_resource type="Curve2D" id="Curve2D_1"]
 
@@ -35,12 +69,20 @@ PathControlPoints = PackedVector2Array(0, 0, 400, 0, 400, -150, 800, -150, 800, 
 [node name="MapBackground" type="ColorRect" parent="World" unique_id=1511150779]
 offset_right = 1280.0
 offset_bottom = 720.0
+mouse_filter = 2
 color = Color(0.15, 0.3, 0.15, 1)
 
 [node name="PathHintVisual" type="Line2D" parent="World" unique_id=769356294]
 points = PackedVector2Array(100, 300, 500, 300, 500, 150, 900, 150, 900, 450, 1300, 450)
 width = 40.0
 default_color = Color(0.45, 0.35, 0.2, 1)
+
+[node name="CastleBase" type="AnimatedSprite2D" parent="World"]
+position = Vector2(1240, 440)
+scale = Vector2(3, 3)
+texture_filter = 1
+sprite_frames = SubResource("SpriteFrames_castle")
+autoplay = "default"
 
 [node name="EnemyPath" type="Path2D" parent="World" unique_id=1481738760]
 position = Vector2(100, 300)
@@ -166,7 +208,6 @@ horizontal_alignment = 1
 
 [node name="EconomyManager" type="Node" parent="Systems" unique_id=421817639]
 script = ExtResource("2_economy_manager")
-InitialGold = 150
 
 [node name="WaveManager" type="Node" parent="Systems" unique_id=495849305 node_paths=PackedStringArray("TargetPath")]
 script = ExtResource("3_wave_manager")
@@ -180,13 +221,6 @@ TowerBaseScene = ExtResource("8_tower_base")
 
 [node name="GameManager" type="Node" parent="Systems" unique_id=1926474564]
 script = ExtResource("5_game_manager")
-
-[node name="AudioManager" type="Node" parent="Systems" unique_id=2926474565]
-script = ExtResource("15_audio_manager")
-
-[node name="EffectsManager" type="Node" parent="Systems" unique_id=3926474566]
-script = ExtResource("17_effects_manager")
-EnemyDeathEffectScene = ExtResource("16_death_effect")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=710558157]
 

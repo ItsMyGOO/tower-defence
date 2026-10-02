@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="TowerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Game/Config/Towers/TowerData.cs" id="1_towerdata"]
+[ext_resource type="Texture2D" path="res://Game/Art/Simple Tower Defense/Towers/Combat Towers/spr_tower_ice_wizard.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://Game/Art/Simple Tower Defense/Towers/Combat Towers Projectiles/spr_tower_ice_wizard_projectile.png" id="3_proj_icon"]
+
+[resource]
+script = ExtResource("1_towerdata")
+TowerId = "frost_tower"
+TowerName = "冰霜塔"
+Kind = 2
+Targeting = 0
+Mode = 1
+BuildCost = 80
+AttackRange = 140.0
+Damage = 5.0
+AttackInterval = 1.2
+AoeRadius = 80.0
+SlowFactor = 0.5
+SlowDuration = 2.0
+ProjectileSpeed = 350.0
+AttackColor = Color(0.4, 0.8, 1, 1)
+MaxLevel = 2
+UpgradeBaseCost = 60.0
+Icon = ExtResource("2_icon")
+ProjectileIcon = ExtResource("3_proj_icon")

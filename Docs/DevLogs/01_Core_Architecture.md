@@ -58,3 +58,9 @@ GameOverPanel 新增 NextLevelButton 与 LevelSelectButton 两个流转出口，
 
 ## 垂直切片闭环设计思考
 首关垂直切片的完整数据流为：HUD 建造按钮被点击 → TowerBuildButton 将 TowerData 写入 CurrentSelectedTowerData → 玩家点击 TowerSlot → Level_01 转发给 TowerManager.TryBuildTower → EconomyManager 扣金币并广播 OnGoldChanged → 塔实例挂载后广播 OnTowerBuilt → HUD 按钮与金币标签同步刷新；战斗链路则由 WaveManager 按 WaveData 配置定时生成 Enemy 挂载至 Path2D → Enemy 沿路径移动或被 Tower 攻击击杀 → OnEnemyKilled / OnEnemyReachedEnd 分别触发金币回流 / HP 扣除 → HP 归零或 AllWavesCompleted 时任一路径触发 OnGameOver → GameManager 冻结时钟并由 GameOverPanel 弹出结算 → 胜利结算触发 SceneManager.UnlockNextLevel 持久化解锁进度 → 点击下一关切入 Level_02 → 从选关界面可验证 Level 2 已被解锁；整个闭环零硬编码引用，所有跨模块交互统一走 EventBus 与 SceneManager 单例，新增系统（如成就、存档云同步）只需订阅对应事件或扩展 SceneManager 即可无缝接入而无需修改现有模块。
+
+## 全局主场景挂载与窗口分辨率方案
+project.godot 的 `application/run/main_scene` 固定指向 `res://Game/UI/MainMenu/MainMenu.tscn`，确保游戏启动即进入主菜单而非测试场景，避免打包后入口丢失。窗口视口尺寸设为 1280×720（16:9 基础分辨率），配合 `Stretch Mode = canvas_items` + `Aspect = keep` 的拉伸组合，实现不同分辨率设备下 UI 与游戏世界按比例等比缩放，画面不会变形或裁切。AutoLoad 列表仅注册 SceneManager（Node 单例），EventBus 为纯静态类无需注册、AudioManager 按场景级挂载（Export 音频资源不适合全局单例），三者各司其职避免节点生命周期冲突。
+
+## PC / Web 双端导出注意事项
+Windows Desktop 导出预设启用 `dotnet/self_contained = true` 与 `x86_64` 架构，打包后无需用户额外安装 .NET 运行时即可独立运行，`.exe` 输出路径统一为 `build/windows/` 目录便于 CI 归档。Web 导出启用 `Stretch Mode canvas_items` + `html/stretch_canvas_to_window_size = true` 保证嵌入网页后自适应容器尺寸，同时关闭线程支持（`thread_support = 0`）以兼容大多数浏览器默认安全策略，`COEP/COOP/CORP` 三条跨域头均保持默认安全值避免 CDN 部署时的权限报错。导出前必须清理临时测试场景的硬编码调试引用（如无限金币、强行触发 GameOver 等），并确认所有 [Export] 节点引用在 .tscn 序列化中不缺失，否则打包后会出现空引用崩溃而编辑器模式下可能正常运行。

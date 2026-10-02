@@ -6,7 +6,7 @@
 [ext_resource type="Script" path="res://Game/Gameplay/Towers/TowerSlot.cs" id="4_tower_slot"]
 [ext_resource type="Resource" path="res://Tests/Data/Towers/Test_ArrowTower.tres" id="5_test_towerdata"]
 
-[node name="BuildTestRoot" type="Node2D" unique_id=10071001]
+[node name="BuildTestRoot" type="Node2D" unique_id=10071001 node_paths=PackedStringArray("EconomyManagerNode", "TowerManagerNode", "Slot1", "Slot2", "Slot3")]
 script = ExtResource("1_buildtest_script")
 TestTowerData = ExtResource("5_test_towerdata")
 EconomyManagerNode = NodePath("EconomyManager")
