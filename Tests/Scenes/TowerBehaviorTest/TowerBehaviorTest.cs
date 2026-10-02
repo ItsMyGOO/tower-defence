@@ -82,6 +82,12 @@ namespace TowerDefence.Tests.Scenes
             catch (System.Exception ex)
             {
                 GD.PrintErr($"[TowerBehaviorTest] ❌ 测试序列异常中止: {ex}");
+
+                // 无头（CI）模式：异常同样必须退出并以失败码上报，否则进程会一直挂着直到 Job 超时
+                if (DisplayServer.GetName() == "headless")
+                {
+                    GetTree().Quit(1);
+                }
             }
         }
 
@@ -371,7 +377,13 @@ namespace TowerDefence.Tests.Scenes
 
             var menu = TowerManager.Instance.RadialMenu;
             AssertTrue(menu.IsOpen && !menu.IsUpgradeMenu, "菜单: 左键空槽位弹出建造环");
-            AssertTrue(menu.Options.Count == TowerManager.Instance.AvailableTowers.Count, "菜单: 建造环选项数与可用塔数一致");
+            // 可用塔数必须 > 0：配置扫描失败时（如资源未导入导致 .tres 加载失败）在源头报错，
+            // 而不是让后续"选项点击"以 0 选项的伪通过混淆定位
+            AssertTrue(
+                menu.Options.Count == TowerManager.Instance.AvailableTowers.Count
+                    && TowerManager.Instance.AvailableTowers.Count > 0,
+                "菜单: 建造环选项数与可用塔数一致(且 > 0)"
+            );
 
             // --- 点击第一个建造选项（目录序第一个 = ArrowTower，成本 50）---
             // 按钮 Pressed 在按下+释放后触发，两个事件都发往选项按钮中心（环顶部）
@@ -636,7 +648,7 @@ namespace TowerDefence.Tests.Scenes
         private async System.Threading.Tasks.Task TestConfigDrivenVisualParams(EnemyData enemyData)
         {
             var placeholderTexture = ImageTexture.CreateFromImage(
-                Image.Create(8, 8, false, Image.Format.Rgba8)
+                Image.CreateEmpty(8, 8, false, Image.Format.Rgba8)
             );
 
             var enemyDataCopy = (EnemyData)enemyData.Duplicate();

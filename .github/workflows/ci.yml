@@ -46,6 +46,10 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp/godot_extract
           mv /tmp/godot_extract/Godot_v${GODOT_VERSION}_mono_linux_x86_64/* godot/
 
+      - name: 导入资源（生成 .godot 缓存）
+        run: |
+          godot/Godot_v${GODOT_VERSION}_mono_linux.x86_64 --headless --path . --import
+
       - name: 运行塔行为测试（退出码 0 = 全部通过）
         run: |
           chmod +x godot/Godot_v${GODOT_VERSION}_mono_linux.x86_64
