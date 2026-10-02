@@ -1,6 +1,7 @@
 using Godot;
 using TowerDefence.Config.Enemies;
 using TowerDefence.Config.Towers;
+using TowerDefence.Core.AutoLoads;
 using TowerDefence.Gameplay.Economy;
 using TowerDefence.Gameplay.Enemies;
 using TowerDefence.Gameplay.Towers;
@@ -16,7 +17,10 @@ namespace TowerDefence.Tests.Scenes
     /// 4) 槽位点击全链路：经视口输入管道的左键建造/右键出售；
     /// 5) 激光塔：光束锁定、持续伤害、自动切换目标；
     /// 6) 槽位环形菜单：点击槽位弹出建造环/升级环，选项点击完成建造与升级；
-    /// 7) 升级 API：等级成长、费用上浮、满级拒绝、按累计投入返还；
+    /// 7) 升级 API：等级成长、费用上浮、满级拒绝、按累计投入返还、索敌碰撞体随射程成长同步；
+    /// 8) 击杀幂等：同帧多源致死伤害只结算一次，逃脱与击杀互斥；
+    /// 9) 菜单订阅生命周期：建造环打开时订阅金币事件，节点销毁时必须退订（防 static 事件泄漏）；
+    /// 10) 配置驱动视觉/碰撞参数：敌人 HitRadius/VisualScale、塔 VisualScale 取自数据资源而非硬编码；
     /// 8) 出售：SellTower 按 SellRefundRatio 对累计投入返还并释放槽位。
     /// 全部断言结果打印 ✅/❌ 与最终汇总，无头模式可直接运行。
     /// </summary>
@@ -63,8 +67,17 @@ namespace TowerDefence.Tests.Scenes
                 await TestBeamLaser(enemyData);
                 await TestTowerUpgrade();
                 await TestSell();
+                await TestKillIdempotency(enemyData);
+                await TestRadialMenuEventLeak();
+                await TestConfigDrivenVisualParams(enemyData);
 
                 GD.Print($"[TowerBehaviorTest] ========== 测试结束：PASS {_passed} / FAIL {_failed} ==========");
+
+                // 无头（CI）模式：以进程退出码上报测试结果，1 = 存在失败断言
+                if (DisplayServer.GetName() == "headless")
+                {
+                    GetTree().Quit(_failed > 0 ? 1 : 0);
+                }
             }
             catch (System.Exception ex)
             {
@@ -490,11 +503,22 @@ namespace TowerDefence.Tests.Scenes
             AssertTrue(!ReferenceEquals(tower.Data, towerData), "升级: 塔持有独立数据副本");
 
             float baseDamage = tower.Data.Damage;
+            float baseRange = tower.Data.AttackRange;
             AssertTrue(tower.ApplyUpgrade(), "升级: 首次升级成功");
             AssertTrue(tower.CurrentLevel == 2, "升级: 等级 +1");
             AssertTrue(Mathf.IsEqualApprox(tower.Data.Damage, baseDamage * 1.3f), "升级: 伤害按 1.3x 成长");
+            AssertTrue(Mathf.IsEqualApprox(tower.Data.AttackRange, baseRange * 1.08f), "升级: 射程按 1.08x 成长");
             AssertTrue(tower.InvestedGold == 100, "升级: 累计投入 = 50 + 50");
             AssertTrue(_economy.CurrentGold == goldBefore - 50, "升级: 扣费正确");
+
+            // 索敌碰撞体半径在 _Ready 按初始射程创建，升级后必须同步，否则射程成长对 Area2D 索敌无效
+            var detectionCircle = tower
+                .GetNodeOrNull<CollisionShape2D>("DetectionArea/DetectionShape")
+                ?.Shape as CircleShape2D;
+            AssertTrue(
+                detectionCircle != null && Mathf.IsEqualApprox(detectionCircle.Radius, tower.Data.AttackRange),
+                "升级: 索敌碰撞体半径随射程成长同步更新"
+            );
 
             AssertTrue(!tower.ApplyUpgrade(), "升级: 满级后拒绝再次升级");
             AssertTrue(_economy.CurrentGold == goldBefore - 50, "升级: 满级升级不扣费");
@@ -533,6 +557,138 @@ namespace TowerDefence.Tests.Scenes
 
             slot.QueueFree();
             await Wait(0.1f);
+        }
+
+        /// <summary>
+        /// 场景 10：击杀幂等。QueueFree 帧末才生效，同一帧内多源伤害（AOE+弹体/多塔同帧）
+        /// 命中同一敌人时不得重复触发击杀事件（双倍金币/特效）；逃脱与击杀互斥——
+        /// 敌人逃脱事件的同帧内补刀不应再发击杀奖励，反之亦然。
+        /// </summary>
+        private async System.Threading.Tasks.Task TestKillIdempotency(EnemyData enemyData)
+        {
+            int killedCount = 0;
+            int reachedEndCount = 0;
+            void OnKilled(string enemyId, int goldReward, Vector2 deathPosition) => killedCount++;
+            void OnReachedEnd(int damageToPlayer) => reachedEndCount++;
+            EventBus.OnEnemyKilled += OnKilled;
+            EventBus.OnEnemyReachedEnd += OnReachedEnd;
+
+            // --- 同帧双倍致死：只允许结算一次击杀 ---
+            var enemy = SpawnEnemy(enemyData, 100);
+            enemy.TakeDamage(enemyData.MaxHp);
+            enemy.TakeDamage(enemyData.MaxHp);
+            AssertTrue(killedCount == 1, "击杀幂等: 同帧多源致死伤害只触发一次击杀事件");
+
+            // --- 逃脱与击杀互斥：在逃脱事件回调内同帧补刀，不应再触发击杀 ---
+            var escaper = SpawnEnemy(enemyData, 100);
+            void OnReachedEndAndHit(int damageToPlayer) => escaper.TakeDamage(enemyData.MaxHp);
+            EventBus.OnEnemyReachedEnd += OnReachedEndAndHit;
+            escaper.ProgressRatio = 1.0f;
+            await Wait(0.2f);
+            EventBus.OnEnemyReachedEnd -= OnReachedEndAndHit;
+
+            AssertTrue(reachedEndCount == 1, "击杀幂等: 逃脱事件恰好触发一次");
+            AssertTrue(killedCount == 1, "击杀幂等: 已逃脱敌人的同帧补刀不再触发击杀");
+
+            EventBus.OnEnemyKilled -= OnKilled;
+            EventBus.OnEnemyReachedEnd -= OnReachedEnd;
+        }
+
+        /// <summary>
+        /// 场景 11：环形菜单订阅生命周期。建造环打开时订阅 OnGoldChanged，
+        /// 节点在菜单未关闭的情况下随场景销毁（移出场景树）时必须退订——
+        /// EventBus 为 static，残留订阅会在下一关触发金币事件时访问已释放节点并抛异常。
+        /// 通过反射读取事件调用列表长度断言订阅数回落。
+        /// </summary>
+        private async System.Threading.Tasks.Task TestRadialMenuEventLeak()
+        {
+            var slot = new TowerSlot { Name = "MenuLeakTestSlot", Position = Vector2.Zero };
+            AddChild(slot);
+
+            var menu = new TowerRadialMenu { Name = "MenuLeakTestMenu" };
+            AddChild(menu);
+
+            int baseline = GoldChangedSubscriberCount();
+
+            menu.OpenBuild(
+                slot,
+                new System.Collections.Generic.List<TowerData>
+                {
+                    new() { TowerId = "leak_test", TowerName = "泄漏测试塔", BuildCost = 50 }
+                }
+            );
+            AssertTrue(GoldChangedSubscriberCount() == baseline + 1, "菜单: 打开建造环时订阅金币变更事件");
+
+            // 模拟场景切换：建造环处于打开状态时节点直接移出场景树（未经过 Close）
+            RemoveChild(menu);
+            menu.QueueFree();
+            AssertTrue(GoldChangedSubscriberCount() == baseline, "菜单: 移出场景树后退订金币事件（无泄漏）");
+
+            slot.QueueFree();
+            await Wait(0.1f);
+        }
+
+        /// <summary>
+        /// 场景 12：配置驱动的视觉/碰撞参数。敌人 HitRadius / VisualScale 与塔 VisualScale
+        /// 不再硬编码于实体脚本，美术填充阶段按素材实际体型在 .tres 中配置。
+        /// 测试用代码生成的 8x8 纹理替代真实素材，走静态图渲染路径。
+        /// </summary>
+        private async System.Threading.Tasks.Task TestConfigDrivenVisualParams(EnemyData enemyData)
+        {
+            var placeholderTexture = ImageTexture.CreateFromImage(
+                Image.Create(8, 8, false, Image.Format.Rgba8)
+            );
+
+            var enemyDataCopy = (EnemyData)enemyData.Duplicate();
+            enemyDataCopy.HitRadius = 24.0f;
+            enemyDataCopy.VisualScale = 5.0f;
+            enemyDataCopy.AnimTexture = null;
+            enemyDataCopy.Icon = placeholderTexture;
+
+            var enemy = SpawnEnemy(enemyDataCopy, 100);
+            var hitCircle = enemy
+                .GetNodeOrNull<CollisionShape2D>("EnemyHitArea/EnemyHitShape")
+                ?.Shape as CircleShape2D;
+            AssertTrue(
+                hitCircle != null && Mathf.IsEqualApprox(hitCircle.Radius, 24.0f),
+                "配置: 敌人碰撞半径取自 EnemyData.HitRadius"
+            );
+
+            var enemySprite = enemy.GetNodeOrNull<Node2D>("EnemySprite");
+            AssertTrue(
+                enemySprite != null && Mathf.IsEqualApprox(enemySprite.Scale.X, 5.0f),
+                "配置: 敌人视觉缩放取自 EnemyData.VisualScale"
+            );
+
+            var towerData = new TowerData
+            {
+                TowerId = "test_visual_scale",
+                TowerName = "缩放测试塔",
+                Icon = placeholderTexture,
+                VisualScale = 4.0f
+            };
+            var tower = SpawnTower(towerData, new Vector2(50, 40));
+            var towerSprite = tower.GetNodeOrNull<Node2D>("TowerSprite");
+            AssertTrue(
+                towerSprite != null && Mathf.IsEqualApprox(towerSprite.Scale.X, 4.0f),
+                "配置: 塔视觉缩放取自 TowerData.VisualScale"
+            );
+
+            Cleanup(tower, enemy);
+            await Wait(0.1f);
+        }
+
+        /// <summary>
+        /// 通过反射统计 EventBus.OnGoldChanged 的订阅者数量（事件为 static，字段编译为私有静态字段）。
+        /// </summary>
+        /// <returns>当前订阅数</returns>
+        private static int GoldChangedSubscriberCount()
+        {
+            var field = typeof(EventBus).GetField(
+                "OnGoldChanged",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic
+            );
+            return (field?.GetValue(null) as System.Delegate)?.GetInvocationList().Length ?? 0;
         }
 
         #endregion

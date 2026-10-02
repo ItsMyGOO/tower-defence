@@ -46,6 +46,18 @@ namespace TowerDefence.Config.Enemies
         [Export] public float AnimFps { get; set; } = 7.0f;
 
         /// <summary>
+        /// 获取或设置敌人索敌/受击判定的碰撞半径（像素）。
+        /// 防御塔 DetectionArea 通过该 Area2D 捕获敌人；美术填充阶段按素材实际体型配置。
+        /// </summary>
+        [Export] public float HitRadius { get; set; } = 16.0f;
+
+        /// <summary>
+        /// 获取或设置敌人视觉缩放倍数（像素素材最近邻放大，整数倍最锐利）。
+        /// 同时作用于行走动画条与静态图；占位色块不受影响。
+        /// </summary>
+        [Export] public float VisualScale { get; set; } = 3.0f;
+
+        /// <summary>
         /// 获取或设置敌人的最大生命值。
         /// 敌人出生时的初始生命值上限；受治疗、护盾等 Buff 影响时，实际当前 HP 在 Enemy 节点上保存。
         /// </summary>

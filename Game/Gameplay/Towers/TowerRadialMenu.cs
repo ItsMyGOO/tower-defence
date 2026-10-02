@@ -116,6 +116,18 @@ namespace TowerDefence.Gameplay.Towers
         }
 
         /// <summary>
+        /// 节点即将从场景树移除时调用。
+        /// 覆盖「建造环打开状态下场景直接切换」的路径（暂停返回主菜单等）：
+        /// EventBus 是 static，订阅不随节点销毁自动解除，残留订阅会在下一关
+        /// 触发金币事件时访问已释放的选项按钮并抛 ObjectDisposedException。
+        /// </summary>
+        public override void _ExitTree()
+        {
+            EventBus.OnGoldChanged -= RefreshAffordStates;
+            Close();
+        }
+
+        /// <summary>
         /// 点击菜单选项以外的任意鼠标按键（GUI 未消费时到达）→ 关闭菜单。
         /// 选项按钮自身的点击在 GUI 阶段被消费，不会进入本回调。
         /// </summary>

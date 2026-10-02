@@ -22,9 +22,9 @@ namespace TowerDefence.Gameplay.Towers
         private const float PlaceholderRadius = 5.0f;
 
         /// <summary>
-        /// 单体弹的落点命中容差（像素）：目标偏离落点超过该值即打空。
+        /// 单体弹落点命中容差的兜底值：_data 缺失时的回退（像素）。
         /// </summary>
-        private const float HitTolerance = 26.0f;
+        private const float FallbackHitTolerance = 26.0f;
 
         /// <summary>
         /// 弹体纹理存在时为 false：改用 Sprite2D 显示弹体贴图而非占位圆。
@@ -64,7 +64,7 @@ namespace TowerDefence.Gameplay.Towers
                     Name = "ProjectileSprite",
                     Texture = _data.ProjectileIcon,
                     TextureFilter = TextureFilterEnum.Nearest,
-                    Scale = new Vector2(2.0f, 2.0f)
+                    Scale = new Vector2(_data.ProjectileVisualScale, _data.ProjectileVisualScale)
                 };
                 AddChild(sprite);
             }
@@ -139,6 +139,7 @@ namespace TowerDefence.Gameplay.Towers
         private void Impact()
         {
             int hitCount = 0;
+            float hitTolerance = _data?.ProjectileHitTolerance ?? FallbackHitTolerance;
 
             if (_data.AoeRadius > 0.0f)
             {
@@ -157,8 +158,9 @@ namespace TowerDefence.Gameplay.Towers
 
                 GD.Print($"[Projectile] 落点结算 | 位置={GlobalPosition} | 半径={_data.AoeRadius} | 命中={hitCount}");
             }
-            else if (_target != null && IsInstanceValid(_target)
-                     && _target.GlobalPosition.DistanceSquaredTo(GlobalPosition) <= HitTolerance * HitTolerance)
+            else if (_target != null
+                     && IsInstanceValid(_target)
+                     && _target.GlobalPosition.DistanceSquaredTo(GlobalPosition) <= hitTolerance * hitTolerance)
             {
                 ApplyHit(_target);
                 hitCount = 1;
@@ -166,7 +168,7 @@ namespace TowerDefence.Gameplay.Towers
             }
             else
             {
-                GD.Print($"[Projectile] 弹体落空（目标偏离落点超过 {HitTolerance}px）| 位置={GlobalPosition}");
+                GD.Print($"[Projectile] 弹体落空（目标偏离落点超过 {hitTolerance}px）| 位置={GlobalPosition}");
             }
 
             QueueFree();

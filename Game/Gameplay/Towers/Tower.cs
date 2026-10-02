@@ -25,6 +25,12 @@ namespace TowerDefence.Gameplay.Towers
         private Area2D _detectionArea;
         private CollisionShape2D _detectionShape;
 
+        /// <summary>
+        /// 索敌范围的圆形碰撞体引用。升级成长射程时同步更新其半径，
+        /// 否则 Area2D 索敌范围停留在初始值，射程成长对非光束塔不生效。
+        /// </summary>
+        private CircleShape2D _detectionCircle;
+
         private readonly List<Enemy> _targetsInRange = new();
 
         /// <summary>
@@ -135,6 +141,10 @@ namespace TowerDefence.Gameplay.Towers
             InvestedGold += cost;
             Data.Damage *= Data.DamageGrowthFactor;
             Data.AttackRange *= Data.RangeGrowthFactor;
+            if (_detectionCircle != null)
+            {
+                _detectionCircle.Radius = Data.AttackRange;
+            }
 
             GD.Print($"[Tower] ✅ {Data.TowerName} 升级至 {CurrentLevel} 级 | 花费 {cost} | 伤害={Data.Damage:F1} | 射程={Data.AttackRange:F0}");
             return true;
@@ -222,9 +232,9 @@ namespace TowerDefence.Gameplay.Towers
             }
             else
             {
-                // 像素风素材：最近邻过滤 + 整数倍放大保持锐利
+                // 像素风素材：最近邻过滤 + 数据配置的放大倍数保持锐利
                 _sprite.TextureFilter = TextureFilterEnum.Nearest;
-                _sprite.Scale = new Vector2(3.0f, 3.0f);
+                _sprite.Scale = new Vector2(Data.VisualScale, Data.VisualScale);
             }
         }
 
@@ -267,6 +277,7 @@ namespace TowerDefence.Gameplay.Towers
                     Radius = Data.AttackRange
                 }
             };
+            _detectionCircle = (CircleShape2D)_detectionShape.Shape;
             _detectionArea.AddChild(_detectionShape);
 
             _detectionArea.AreaEntered += OnEnemyAreaEntered;

@@ -103,6 +103,22 @@ namespace TowerDefence.Config.Towers
         [Export] public float ProjectileSpeed { get; set; } = 400.0f;
 
         /// <summary>
+        /// 获取或设置单体弹（AoeRadius = 0）的落点命中容差（像素）：
+        /// 目标偏离落点超过该值即打空。美术填充阶段按弹体/目标体型调整。
+        /// </summary>
+        [Export] public float ProjectileHitTolerance { get; set; } = 26.0f;
+
+        /// <summary>
+        /// 获取或设置弹体贴图（ProjectileIcon）的视觉缩放倍数（像素素材最近邻放大）。
+        /// </summary>
+        [Export] public float ProjectileVisualScale { get; set; } = 2.0f;
+
+        /// <summary>
+        /// 获取或设置塔身图标（Icon）的视觉缩放倍数（像素素材最近邻放大，整数倍最锐利）。
+        /// </summary>
+        [Export] public float VisualScale { get; set; } = 3.0f;
+
+        /// <summary>
         /// 获取或设置攻击表现颜色：即时模式为 tracer 拉线颜色，弹道模式为弹体占位圆颜色。
         /// 纯配置驱动的占位视觉，替换精灵图后仍可复用为粒子/弹体主色。
         /// </summary>

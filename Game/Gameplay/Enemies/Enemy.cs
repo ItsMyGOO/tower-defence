@@ -60,6 +60,12 @@ namespace TowerDefence.Gameplay.Enemies
         private float _slowRemaining;
 
         /// <summary>
+        /// 终态标志：击杀或逃脱事件已触发。QueueFree 帧末才生效，同一帧内后续伤害
+        /// 命中"已死"敌人不得重复结算（双倍金币/特效），逃脱与击杀互斥。
+        /// </summary>
+        private bool _isDead;
+
+        /// <summary>
         /// 节点被添加到场景树时调用。
         /// 完成生命值初始化、校验 Data 配置，以及动态创建索敌碰撞体。
         /// </summary>
@@ -117,7 +123,7 @@ namespace TowerDefence.Gameplay.Enemies
                     Name = "EnemySprite",
                     SpriteFrames = frames,
                     TextureFilter = TextureFilterEnum.Nearest,
-                    Scale = new Vector2(3.0f, 3.0f)
+                    Scale = new Vector2(Data.VisualScale, Data.VisualScale)
                 };
                 AddChild(animSprite);
                 animSprite.Play("default");
@@ -134,15 +140,15 @@ namespace TowerDefence.Gameplay.Enemies
                 Name = "EnemySprite",
                 Texture = Data.Icon,
                 TextureFilter = TextureFilterEnum.Nearest,
-                Scale = new Vector2(3.0f, 3.0f)
+                Scale = new Vector2(Data.VisualScale, Data.VisualScale)
             };
             AddChild(sprite);
         }
 
         /// <summary>
         /// 创建并配置用于防御塔索敌检测的 Area2D 与圆形碰撞体。
-        /// 碰撞半径采用固定值 16 像素（适配 ColorRect 占位视觉），
-        /// 使 Tower 的 DetectionArea 能够通过 Area 信号捕获该敌人。
+        /// 碰撞半径取自 Data.HitRadius，按敌人素材实际体型配置（默认 16 像素，
+        /// 下限钳制 1 防止误配 0 导致该敌人永远无法被索敌）。
         /// </summary>
         private void SetupHitArea()
         {
@@ -157,7 +163,7 @@ namespace TowerDefence.Gameplay.Enemies
                 Name = "EnemyHitShape",
                 Shape = new CircleShape2D
                 {
-                    Radius = 16.0f
+                    Radius = Mathf.Max(1.0f, Data.HitRadius)
                 }
             };
             _hitArea.AddChild(_hitShape);
@@ -170,7 +176,7 @@ namespace TowerDefence.Gameplay.Enemies
         /// <param name="delta">距上一帧经过的时间（秒）</param>
         public override void _Process(double delta)
         {
-            if (Data == null) return;
+            if (Data == null || _isDead) return;
 
             if (_slowRemaining > 0.0f)
             {
@@ -192,6 +198,7 @@ namespace TowerDefence.Gameplay.Enemies
 
             if (ProgressRatio >= 1.0f)
             {
+                _isDead = true;
                 EventBus.RaiseEnemyReachedEnd(Data.DamageToPlayer);
                 QueueFree();
             }
@@ -216,17 +223,20 @@ namespace TowerDefence.Gameplay.Enemies
         /// <summary>
         /// 对敌人造成伤害并扣除当前生命值。
         /// 扣血后若 HP 小于等于 0，将触发击杀事件并销毁自身节点。
+        /// 幂等：敌人已死亡（击杀或逃脱已触发）时直接忽略后续伤害，
+        /// 防止同帧多源伤害重复发放击杀奖励与特效。
         /// </summary>
         /// <param name="damage">本次伤害的数值（非负浮点数）；负值会被截断为 0</param>
         public void TakeDamage(float damage)
         {
-            if (Data == null) return;
+            if (Data == null || _isDead) return;
             if (damage < 0.0f) damage = 0.0f;
 
             CurrentHp -= damage;
 
             if (CurrentHp <= 0.0f)
             {
+                _isDead = true;
                 EventBus.RaiseEnemyKilled(Data.EnemyId, Data.RewardGold, GlobalPosition);
                 QueueFree();
             }
