@@ -63,6 +63,7 @@ namespace TowerDefence.Tests.Scenes
 
             SubscribeTestEvents();
             ValidateBindings();
+            _ = RunAutoChecksAsync();
         }
 
         /// <summary>
@@ -107,8 +108,10 @@ namespace TowerDefence.Tests.Scenes
         }
 
         /// <summary>
-        /// 创建 HUDView 主界面及其内部 Label。
-        /// 由于测试场景采用代码动态创建，避免依赖编辑器手工绑定节点。
+        /// 创建 HUDView 主界面及其内部 Label / PauseButton。
+        /// 子节点先于 HUDView 进树构建（命名与真实 HUDView.tscn 一致：TopBar/...），
+        /// HUDView._Ready 的兜底解析即可拿到全部引用——无需事后属性注入，
+        /// 与真实关卡场景走完全相同的初始化链路。
         /// </summary>
         private void CreateHUDView()
         {
@@ -116,19 +119,18 @@ namespace TowerDefence.Tests.Scenes
             {
                 Name = "HUDView"
             };
-            AddChild(_hudView);
 
             var topBar = new HBoxContainer
             {
-                Name = "TopBarContainer",
+                Name = "TopBar",
                 OffsetTop = 10,
                 OffsetLeft = 10
             };
-            _hudView.AddChild(topBar);
 
             var goldLabel = new Label { Name = "GoldLabel" };
             var hpLabel = new Label { Name = "HpLabel" };
             var waveLabel = new Label { Name = "WaveLabel" };
+            var pauseButton = new Button { Name = "PauseButton", Text = "⏸" };
 
             goldLabel.AddThemeFontSizeOverride("font_size", 18);
             hpLabel.AddThemeFontSizeOverride("font_size", 18);
@@ -143,10 +145,11 @@ namespace TowerDefence.Tests.Scenes
             topBar.AddChild(hpLabel);
             topBar.AddChild(new Control { CustomMinimumSize = new Vector2(30, 0) });
             topBar.AddChild(waveLabel);
+            topBar.AddChild(new Control { CustomMinimumSize = new Vector2(30, 0) });
+            topBar.AddChild(pauseButton);
 
-            _hudView.GoldLabel = goldLabel;
-            _hudView.HpLabel = hpLabel;
-            _hudView.WaveLabel = waveLabel;
+            _hudView.AddChild(topBar);
+            AddChild(_hudView);
         }
 
         /// <summary>
@@ -223,6 +226,70 @@ namespace TowerDefence.Tests.Scenes
         #region 测试事件订阅与验证
 
         private int _currentWave = -1;
+        private int _passed;
+        private int _failed;
+
+        /// <summary>
+        /// 自动断言序列：通过经济/事件接口驱动 HUD 刷新并校验 Label 文本。
+        /// 编辑器内仍可配合右侧测试按钮做手动交互验证。
+        /// </summary>
+        private async System.Threading.Tasks.Task RunAutoChecksAsync()
+        {
+            try
+            {
+                await ToSignal(GetTree().CreateTimer(0.2), SceneTreeTimer.SignalName.Timeout);
+
+                AssertTrue(_hudView?.GoldLabel?.Text == "金币: 30", "HUD: 初始金币显示 30");
+                AssertTrue(_hudView?.HpLabel?.Text == "血量: 20", "HUD: 初始血量显示 20");
+                AssertTrue(_hudView?.PauseButton != null, "HUD: PauseButton 兜底解析成功");
+
+                _economyManager?.AddGold(100);
+                AssertTrue(_hudView?.GoldLabel?.Text == "金币: 130", "HUD: 金币事件驱动刷新 (+100)");
+
+                EventBus.RaiseEnemyReachedEnd(3);
+                AssertTrue(_hudView?.HpLabel?.Text == "血量: 17", "HUD: 血量事件驱动刷新 (-3)");
+
+                EventBus.RaiseWaveStarted(4);
+                AssertTrue(_hudView?.WaveLabel?.Text == "波次: 4", "HUD: 波次事件驱动刷新");
+
+                GD.Print($"[UITest] ========== 测试结束：PASS {_passed} / FAIL {_failed} ==========");
+
+                // 无头（CI）模式：以进程退出码上报测试结果，1 = 存在失败断言
+                if (DisplayServer.GetName() == "headless")
+                {
+                    await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
+                    GetTree().Quit(_failed > 0 ? 1 : 0);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                GD.PrintErr($"[UITest] ❌ 测试序列异常中止: {ex}");
+
+                if (DisplayServer.GetName() == "headless")
+                {
+                    GetTree().Quit(1);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 记录一条断言结果。
+        /// </summary>
+        /// <param name="condition">断言条件</param>
+        /// <param name="name">断言名称（日志用）</param>
+        private void AssertTrue(bool condition, string name)
+        {
+            if (condition)
+            {
+                _passed++;
+                GD.Print($"[UITest] ✅ PASS {name}");
+            }
+            else
+            {
+                _failed++;
+                GD.PrintErr($"[UITest] ❌ FAIL {name}");
+            }
+        }
 
         /// <summary>
         /// 订阅 EventBus 事件用于日志输出，便于在控制台验证事件流。
