@@ -1,4 +1,5 @@
 using Godot;
+using TowerDefence.Core.Managers;
 
 namespace TowerDefence.UI.Panels
 {
@@ -18,6 +19,17 @@ namespace TowerDefence.UI.Panels
         /// 点击后隐藏面板并将 GetTree().Paused 置为 false，回归正常战斗节奏。
         /// </summary>
         [Export] public Button ResumeButton { get; set; }
+
+        /// <summary>
+        /// 获取或设置主音量滑条节点引用。
+        /// 拖动实时经 SettingsManager 应用到 Master 总线并持久化；初始值从存档恢复。
+        /// </summary>
+        [Export] public HSlider MasterVolumeSlider { get; set; }
+
+        /// <summary>
+        /// 音量行容器（Label + Slider），随面板显隐整体切换可见性。
+        /// </summary>
+        private Control _volumeRow;
 
         #endregion
 
@@ -39,18 +51,30 @@ namespace TowerDefence.UI.Panels
                 ResumeButton.Pressed += HandleResumePressed;
             }
 
+            if (MasterVolumeSlider != null)
+            {
+                // 初始值从存档恢复（不触发 ValueChanged），拖动时实时应用并写盘
+                MasterVolumeSlider.SetValueNoSignal(SettingsManager.Instance?.MasterVolume * 100.0f ?? 80.0f);
+                MasterVolumeSlider.ValueChanged += HandleMasterVolumeChanged;
+            }
+
             GD.Print("[PauseMenuPanel] ✅ 暂停菜单已就绪，玩家按 ESC 或点击 HUD 暂停按钮可显隐。");
         }
 
         /// <summary>
         /// 节点即将从场景树移除时调用。
-        /// 先解绑"继续游戏"按钮，再交由基类解绑共享按钮。
+        /// 先解绑"继续游戏"按钮与音量滑条，再交由基类解绑共享按钮。
         /// </summary>
         public override void _ExitTree()
         {
             if (ResumeButton != null)
             {
                 ResumeButton.Pressed -= HandleResumePressed;
+            }
+
+            if (MasterVolumeSlider != null)
+            {
+                MasterVolumeSlider.ValueChanged -= HandleMasterVolumeChanged;
             }
 
             base._ExitTree();
@@ -80,20 +104,30 @@ namespace TowerDefence.UI.Panels
         #region 节点引用解析
 
         /// <summary>
-        /// 解析本面板特有的 ResumeButton 引用。
+        /// 解析本面板特有的 ResumeButton 与音量滑条引用。
         /// </summary>
         protected override void ResolveExtraUINodeReferences()
         {
             ResumeButton ??= GetNodeOrNull<Button>("CenterContainer/VBox/ResumeButton");
             CheckResolved(ResumeButton, nameof(ResumeButton));
+
+            MasterVolumeSlider ??= GetNodeOrNull<HSlider>("CenterContainer/VBox/VolumeRow/MasterVolumeSlider");
+            CheckResolved(MasterVolumeSlider, nameof(MasterVolumeSlider));
+
+            _volumeRow ??= GetNodeOrNull<Control>("CenterContainer/VBox/VolumeRow");
         }
 
         /// <summary>
-        /// 隐藏面板：除共享四按钮外，同步隐藏"继续游戏"按钮。
+        /// 隐藏面板：除共享四按钮外，同步隐藏"继续游戏"按钮与音量行。
         /// </summary>
         protected override void HideExtraNodes()
         {
             SetButtonVisible(ResumeButton, false);
+
+            if (_volumeRow != null)
+            {
+                _volumeRow.Visible = false;
+            }
         }
 
         #endregion
@@ -143,17 +177,33 @@ namespace TowerDefence.UI.Panels
             HidePanelAndResume();
         }
 
+        /// <summary>
+        /// 处理主音量滑条值变更事件。
+        /// 将 0-100 滑条值换算为线性音量交给 SettingsManager（应用总线 + 写盘）。
+        /// </summary>
+        /// <param name="value">滑条当前值（0-100）</param>
+        private void HandleMasterVolumeChanged(double value)
+        {
+            SettingsManager.Instance?.SetMasterVolume((float)value / 100.0f);
+        }
+
         #endregion
 
         #region 面板显隐控制（内部）
 
         /// <summary>
-        /// 显示暂停遮罩并设置全局暂停时钟。
+        /// 显示暂停遮罩、音量行并设置全局暂停时钟。
         /// </summary>
         private void ShowPanelAndPause()
         {
             ShowPanel();
             SetButtonVisible(ResumeButton, true);
+
+            if (_volumeRow != null)
+            {
+                _volumeRow.Visible = true;
+            }
+
             GetTree().Paused = true;
             GD.Print("[PauseMenuPanel] ⏸️ 暂停菜单开启（Paused = true）");
         }

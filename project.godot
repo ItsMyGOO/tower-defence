@@ -16,6 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="TowerDefence-Core"
 config/description="塔防游戏核心框架 - 基于 Godot 4 C# 的数据驱动塔防游戏"
+config/version="0.1.0"
 run/main_scene="res://Game/UI/MainMenu/MainMenu.tscn"
 config/features=PackedStringArray("4.6", "C#")
 config/icon="res://icon.svg"
@@ -25,6 +26,7 @@ config/icon="res://icon.svg"
 SceneManager="*res://Game/Core/Managers/SceneManager.cs"
 AudioManager="*res://Game/Core/Managers/AudioManager.tscn"
 EffectsManager="*res://Game/Core/Managers/EffectsManager.tscn"
+SettingsManager="*res://Game/Core/Managers/SettingsManager.cs"
 
 [display]
 
